@@ -5,6 +5,7 @@ import {
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { speakChinese } from '../src/lib/tts-speech-service';
 import { fetchStoryDetail, StoryDetail } from '../src/lib/library-service';
+import { StoryNarrativeSection } from '../src/components/story-narrative-section';
 
 // A story reads top-to-bottom: each photo with its scene words underneath,
 // so users can "re-walk" the moment and review its vocabulary in context.
@@ -43,6 +44,8 @@ export default function StoryDetailScreen() {
       <Text style={styles.meta}>
         {story.photos.length} photos · {story.vocabularyCount} unique words
       </Text>
+
+      <StoryNarrativeSection storyId={id} />
 
       {story.photos.map((photo, i) => (
         <View key={photo.story_photo_id} style={styles.photoBlock}>

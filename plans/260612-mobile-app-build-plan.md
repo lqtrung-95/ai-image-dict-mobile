@@ -42,7 +42,8 @@ Stack: Expo (React Native + TypeScript) mobile app. Backend: **reuse existing ai
   - Offline caching beyond current in-memory state
 - [ ] **Backlog / polish:**
   - Story feature rework (AI-generated narrative from photo words)
-  - Login flow smoothing, Android prompts for name/goal/list dialogs (iOS-only Alert.prompt today)
+  - [x] Cross-platform input dialogs (TextInputModal) for name/goal/list — Android now supported
+  - [x] Signup email-confirmation handling (guides user to inbox)
 
 ## Structure
 

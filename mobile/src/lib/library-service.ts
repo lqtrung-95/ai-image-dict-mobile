@@ -135,6 +135,26 @@ export async function fetchStoryDetail(id: string): Promise<StoryDetail> {
   return data.story;
 }
 
+export interface NarrativeSentence {
+  zh: string;
+  pinyin: string;
+  en: string;
+}
+
+export interface StoryNarrative {
+  sentences: NarrativeSentence[];
+  wordsUsed: string[];
+}
+
+// AI writes a short Chinese story weaving in the story photos' vocabulary.
+// Not persisted server-side; cache per session on the client.
+export async function generateNarrative(storyId: string): Promise<StoryNarrative> {
+  const res = await apiFetch(`/api/stories/${storyId}/narrative`, { method: 'POST' });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? 'Failed to generate story');
+  return data.narrative;
+}
+
 export async function deleteStory(id: string): Promise<void> {
   const res = await apiFetch(`/api/stories/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('Failed to delete story');
