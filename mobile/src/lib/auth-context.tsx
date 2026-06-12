@@ -19,7 +19,8 @@ interface AuthContextValue {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
-  signup: (email: string, password: string, displayName?: string) => Promise<void>;
+  /** Returns true when a session was created; false when email confirmation is pending */
+  signup: (email: string, password: string, displayName?: string) => Promise<boolean>;
   resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -94,12 +95,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signup = async (email: string, password: string, displayName?: string) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { display_name: displayName ?? email.split('@')[0] } },
     });
     if (error) throw new Error(error.message);
+    // With email confirmation enabled, Supabase returns a user but no session
+    return data.session !== null;
   };
 
   const resetPassword = async (email: string) => {

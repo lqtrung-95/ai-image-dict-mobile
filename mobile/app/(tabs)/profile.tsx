@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Alert, Platform, ScrollView,
+  View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../src/lib/auth-context';
 import { exportVocabularyToAnki } from '../../src/lib/anki-export-service';
+import { TextInputModal } from '../../src/components/text-input-modal';
 import {
   fetchProfile, updateDisplayName, exportAllUserData, deleteAccount,
 } from '../../src/lib/user-settings-service';
@@ -14,6 +15,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [nameModalOpen, setNameModalOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -48,19 +50,12 @@ export default function ProfileScreen() {
     }
   };
 
-  const editName = () => {
-    if (Platform.OS !== 'ios') {
-      Alert.alert('Edit name', 'Name editing UI is iOS-only for now.');
-      return;
-    }
-    Alert.prompt('Display name', 'How should we call you?', async (value) => {
-      const name = value?.trim();
-      if (!name) return;
-      await run('name', async () => {
-        await updateDisplayName(name);
-        setDisplayName(name);
-      }, 'Update failed');
-    }, 'plain-text', displayName ?? '');
+  const submitName = async (name: string) => {
+    setNameModalOpen(false);
+    await run('name', async () => {
+      await updateDisplayName(name);
+      setDisplayName(name);
+    }, 'Update failed');
   };
 
   const confirmDeleteAccount = () => {
@@ -92,9 +87,19 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 24 }}>
-      <TouchableOpacity onPress={editName}>
+      <TouchableOpacity onPress={() => setNameModalOpen(true)}>
         <Text style={styles.name}>{displayName ?? '—'} <Text style={styles.editHint}>✏️</Text></Text>
       </TouchableOpacity>
+
+      <TextInputModal
+        visible={nameModalOpen}
+        title="Display name"
+        message="How should we call you?"
+        placeholder="Your name"
+        initialValue={displayName ?? ''}
+        onSubmit={submitName}
+        onCancel={() => setNameModalOpen(false)}
+      />
       <Text style={styles.email}>{user.email}</Text>
 
       <Text style={styles.sectionLabel}>Data</Text>

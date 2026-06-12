@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import {
-  ScrollView, Text, TouchableOpacity, StyleSheet, Alert, Platform, View,
+  ScrollView, Text, TouchableOpacity, StyleSheet, Alert, View,
 } from 'react-native';
 import { fetchLists, createList, VocabularyList } from '../lib/library-service';
+import { TextInputModal } from './text-input-modal';
 
 interface Props {
   selectedListId: string | null;
@@ -13,25 +14,20 @@ interface Props {
 // Shown on the analysis result screen so users can organize immediately.
 export function ListPickerRow({ selectedListId, onSelect }: Props) {
   const [lists, setLists] = useState<VocabularyList[]>([]);
+  const [creatorOpen, setCreatorOpen] = useState(false);
 
   useEffect(() => {
     fetchLists().then(setLists).catch(() => {});
   }, []);
 
-  const promptNewList = () => {
-    if (Platform.OS === 'ios') {
-      Alert.prompt('New List', 'Name your list', async (name) => {
-        if (!name?.trim()) return;
-        try {
-          const created = await createList(name.trim(), '#a855f7');
-          setLists((prev) => [created, ...prev]);
-          onSelect(created.id);
-        } catch {
-          Alert.alert('Create failed', 'Try again');
-        }
-      });
-    } else {
-      Alert.alert('New List', 'Create lists from the Lists screen on Android for now.');
+  const submitNewList = async (name: string) => {
+    setCreatorOpen(false);
+    try {
+      const created = await createList(name, '#a855f7');
+      setLists((prev) => [created, ...prev]);
+      onSelect(created.id);
+    } catch {
+      Alert.alert('Create failed', 'Try again');
     }
   };
 
@@ -55,10 +51,20 @@ export function ListPickerRow({ selectedListId, onSelect }: Props) {
             <Text style={styles.chipText}>{list.name}</Text>
           </TouchableOpacity>
         ))}
-        <TouchableOpacity style={styles.chip} onPress={promptNewList}>
+        <TouchableOpacity style={styles.chip} onPress={() => setCreatorOpen(true)}>
           <Text style={[styles.chipText, { color: '#a855f7' }]}>+ New</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      <TextInputModal
+        visible={creatorOpen}
+        title="New List"
+        message="Name your list"
+        placeholder="e.g. Kitchen words"
+        submitLabel="Create"
+        onSubmit={submitNewList}
+        onCancel={() => setCreatorOpen(false)}
+      />
     </View>
   );
 }

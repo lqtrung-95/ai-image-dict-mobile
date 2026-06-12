@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { fetchDailyGoals, setDailyGoal, DailyGoalsResponse } from '../lib/stats-service';
+import { TextInputModal } from './text-input-modal';
 
 // Daily review goal with progress bar. Tap "edit" to change the target.
 export function DailyGoalCard() {
   const [data, setData] = useState<DailyGoalsResponse | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
 
   const load = useCallback(() => {
     fetchDailyGoals().then(setData).catch(() => {});
@@ -17,35 +19,26 @@ export function DailyGoalCard() {
   const target = reviewGoal?.target_value ?? 0;
   const pct = target > 0 ? Math.min(100, Math.round((done / target) * 100)) : 0;
 
-  const editGoal = () => {
-    if (Platform.OS !== 'ios') {
-      Alert.alert('Set goal', 'Goal editing UI is iOS-only for now.');
+  const submitGoal = async (value: string) => {
+    setEditorOpen(false);
+    const newTarget = parseInt(value, 10);
+    if (!newTarget || newTarget < 1 || newTarget > 500) {
+      Alert.alert('Invalid goal', 'Pick a number between 1 and 500.');
       return;
     }
-    Alert.prompt(
-      'Daily review goal',
-      'How many words do you want to review per day?',
-      async (value) => {
-        const target = parseInt(value ?? '', 10);
-        if (!target || target < 1 || target > 500) return;
-        try {
-          await setDailyGoal('reviews_completed', target);
-          load();
-        } catch {
-          Alert.alert('Save failed', 'Try again');
-        }
-      },
-      'plain-text',
-      reviewGoal ? String(reviewGoal.target_value) : '20',
-      'number-pad'
-    );
+    try {
+      await setDailyGoal('reviews_completed', newTarget);
+      load();
+    } catch {
+      Alert.alert('Save failed', 'Try again');
+    }
   };
 
   return (
     <View style={styles.card}>
       <View style={styles.headerRow}>
         <Text style={styles.label}>🎯 Daily Goal</Text>
-        <TouchableOpacity onPress={editGoal}>
+        <TouchableOpacity onPress={() => setEditorOpen(true)}>
           <Text style={styles.edit}>{reviewGoal ? 'Edit' : 'Set goal'}</Text>
         </TouchableOpacity>
       </View>
@@ -62,6 +55,17 @@ export function DailyGoalCard() {
       ) : (
         <Text style={styles.empty}>Set a daily review goal to build a streak.</Text>
       )}
+
+      <TextInputModal
+        visible={editorOpen}
+        title="Daily review goal"
+        message="How many words do you want to review per day?"
+        placeholder="e.g. 20"
+        initialValue={reviewGoal ? String(reviewGoal.target_value) : '20'}
+        keyboardType="number-pad"
+        onSubmit={submitGoal}
+        onCancel={() => setEditorOpen(false)}
+      />
     </View>
   );
 }

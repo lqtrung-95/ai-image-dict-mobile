@@ -21,9 +21,17 @@ export default function SignupScreen() {
     }
     setSubmitting(true);
     try {
-      await signup(email.trim(), password, displayName.trim() || undefined);
-      if (router.canGoBack()) router.back();
-      else router.replace('/(tabs)');
+      const hasSession = await signup(email.trim(), password, displayName.trim() || undefined);
+      if (hasSession) {
+        if (router.canGoBack()) router.back();
+        else router.replace('/(tabs)');
+      } else {
+        Alert.alert(
+          'Confirm your email',
+          `We sent a confirmation link to ${email.trim()}. Tap it, then come back and log in.`,
+          [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }]
+        );
+      }
     } catch (err) {
       Alert.alert('Sign up failed', err instanceof Error ? err.message : 'Please try again');
     } finally {
