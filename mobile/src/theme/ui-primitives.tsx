@@ -3,6 +3,7 @@ import {
   View, Text, Pressable, ScrollView, ViewStyle, TextStyle, StyleProp,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from './theme-context';
 import { spacing, radius, typography, makeShadow } from './theme';
 
@@ -15,18 +16,22 @@ export function Icon({ name, size = 24, color }: { name: IconName; size?: number
 }
 
 export function Screen({
-  children, scroll = false, contentStyle,
+  children, scroll = false, contentStyle, edgeToEdge = false,
 }: {
   children: React.ReactNode;
   scroll?: boolean;
   contentStyle?: StyleProp<ViewStyle>;
+  edgeToEdge?: boolean; // skip top safe-area padding (e.g. screens with own header)
 }) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const topPad = edgeToEdge ? spacing.md : insets.top + spacing.sm;
+
   if (scroll) {
     return (
       <ScrollView
         style={{ flex: 1, backgroundColor: colors.background }}
-        contentContainerStyle={[{ padding: spacing.containerMargin }, contentStyle]}
+        contentContainerStyle={[{ paddingHorizontal: spacing.containerMargin, paddingTop: topPad, paddingBottom: spacing.containerMargin }, contentStyle]}
         showsVerticalScrollIndicator={false}
       >
         {children}
@@ -34,7 +39,7 @@ export function Screen({
     );
   }
   return (
-    <View style={[{ flex: 1, backgroundColor: colors.background, padding: spacing.containerMargin }, contentStyle as ViewStyle]}>
+    <View style={[{ flex: 1, backgroundColor: colors.background, paddingHorizontal: spacing.containerMargin, paddingTop: topPad }, contentStyle as ViewStyle]}>
       {children}
     </View>
   );
@@ -67,7 +72,7 @@ export function Card({
 }
 
 // Uppercase eyebrow label
-export function Eyebrow({ children, style }: { children: string; style?: StyleProp<TextStyle> }) {
+export function Eyebrow({ children, style }: { children: React.ReactNode; style?: StyleProp<TextStyle> }) {
   const { colors } = useTheme();
   return (
     <Text style={[typography.label, { color: colors.outline, textTransform: 'uppercase', letterSpacing: 1 }, style]}>

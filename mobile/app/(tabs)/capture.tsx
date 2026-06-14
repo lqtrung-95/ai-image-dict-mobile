@@ -1,17 +1,18 @@
 import { useState, useEffect } from 'react';
-import {
-  View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image,
-} from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert, Image } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../src/lib/auth-context';
-import {
-  analyzePhoto, getTrialUsed, TRIAL_LIMIT,
-} from '../../src/lib/analysis-service';
+import { analyzePhoto, getTrialUsed, TRIAL_LIMIT } from '../../src/lib/analysis-service';
 import { setLatestAnalysisResult } from '../../src/lib/analysis-result-store';
+import { Screen, Eyebrow } from '../../src/theme/ui-primitives';
+import { useTheme } from '../../src/theme/theme-context';
+import { spacing, radius, typography, fonts, makeShadow } from '../../src/theme/theme';
 
 export default function CaptureScreen() {
   const { user } = useAuth();
+  const { colors } = useTheme();
   const router = useRouter();
   const [analyzing, setAnalyzing] = useState(false);
   const [previewUri, setPreviewUri] = useState<string | null>(null);
@@ -25,52 +26,27 @@ export default function CaptureScreen() {
     const permission = fromCamera
       ? await ImagePicker.requestCameraPermissionsAsync()
       : await ImagePicker.requestMediaLibraryPermissionsAsync();
-
     if (!permission.granted) {
-      Alert.alert(
-        'Permission needed',
-        fromCamera
-          ? 'Camera access is required to take photos.'
-          : 'Photo library access is required to choose images.'
-      );
+      Alert.alert('Permission needed', fromCamera ? 'Camera access is required to take photos.' : 'Photo library access is required.');
       return;
     }
-
-    const options: ImagePicker.ImagePickerOptions = {
-      mediaTypes: ['images'],
-      quality: 0.4, // keep base64 payload well under the API's 10mb JSON limit
-      base64: true,
-    };
-
-    const result = fromCamera
-      ? await ImagePicker.launchCameraAsync(options)
-      : await ImagePicker.launchImageLibraryAsync(options);
-
+    const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 0.4, base64: true };
+    const result = fromCamera ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
     if (result.canceled || !result.assets[0]?.base64) return;
 
     const asset = result.assets[0];
     setPreviewUri(asset.uri);
     setAnalyzing(true);
-
     try {
-      const analysis = await analyzePhoto(
-        `data:image/jpeg;base64,${asset.base64}`,
-        asset.uri,
-        !!user
-      );
+      const analysis = await analyzePhoto(`data:image/jpeg;base64,${asset.base64}`, asset.uri, !!user);
       setLatestAnalysisResult(analysis);
       router.push('/analysis-result');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Analysis failed';
       if (message === 'TRIAL_EXHAUSTED') {
-        Alert.alert(
-          'Free trial used up',
-          `You've used your ${TRIAL_LIMIT} free analyses. Log in to continue (6 free per day).`,
-          [
-            { text: 'Not now' },
-            { text: 'Log In', onPress: () => router.push('/(auth)/login') },
-          ]
-        );
+        Alert.alert('Free trial used up', `You've used your ${TRIAL_LIMIT} free analyses. Log in to continue (6 free per day).`, [
+          { text: 'Not now' }, { text: 'Log In', onPress: () => router.push('/(auth)/login') },
+        ]);
       } else if (message === 'DAILY_LIMIT_REACHED') {
         Alert.alert('Daily limit reached', "You've used all 6 free analyses today. Come back tomorrow!");
       } else {
@@ -84,58 +60,60 @@ export default function CaptureScreen() {
 
   if (analyzing) {
     return (
-      <View style={[styles.container, styles.centered]}>
+      <Screen contentStyle={{ justifyContent: 'center', alignItems: 'center' }}>
         {previewUri && <Image source={{ uri: previewUri }} style={styles.preview} />}
-        <ActivityIndicator size="large" color="#a855f7" style={{ marginTop: 24 }} />
-        <Text style={styles.analyzingText}>Analyzing your photo…</Text>
-        <Text style={styles.analyzingSubtext}>Detecting objects and translating to Chinese</Text>
-      </View>
+        <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: spacing.lg }} />
+        <Text style={[typography.heading, { color: colors.onSurface, marginTop: spacing.md }]}>Analyzing your photo…</Text>
+        <Text style={[typography.body, { color: colors.onSurfaceVariant, marginTop: 4 }]}>Detecting objects and translating to Chinese</Text>
+      </Screen>
     );
   }
 
   return (
-    <View style={[styles.container, styles.centered]}>
-      <Text style={styles.emoji}>📷</Text>
-      <Text style={styles.title}>Capture & Learn</Text>
-      <Text style={styles.subtitle}>
-        Take a photo and AI will teach you the Chinese words for everything in it.
+    <Screen contentStyle={{ justifyContent: 'center', alignItems: 'center', flexGrow: 1 }}>
+      <View style={[styles.heroIcon, { backgroundColor: colors.primarySoft }]}>
+        <MaterialIcons name="photo-camera" size={44} color={colors.primary} />
+      </View>
+      <Text style={{ fontFamily: fonts.hanzi, fontSize: 40, color: colors.onSurface, marginTop: spacing.lg }}>看图识字</Text>
+      <Text style={[typography.headline, { color: colors.onSurface, marginTop: spacing.xs }]}>Capture & Learn</Text>
+      <Text style={[typography.body, { color: colors.onSurfaceVariant, textAlign: 'center', marginTop: spacing.xs, paddingHorizontal: spacing.lg }]}>
+        Take a photo and AI will teach you the Chinese word for everything in it.
       </Text>
 
-      <TouchableOpacity style={styles.primaryButton} onPress={() => pickImage(true)}>
-        <Text style={styles.primaryButtonText}>📸  Take Photo</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.secondaryButton} onPress={() => pickImage(false)}>
-        <Text style={styles.secondaryButtonText}>🖼  Choose from Library</Text>
-      </TouchableOpacity>
+      <Pressable
+        style={({ pressed }) => [styles.primaryBtn, { backgroundColor: colors.primaryContainer, ...makeShadow(colors, 'jade') }, pressed && { transform: [{ scale: 0.98 }] }]}
+        onPress={() => pickImage(true)}
+      >
+        <MaterialIcons name="photo-camera" size={22} color={colors.onPrimaryContainer} />
+        <Text style={[typography.label, { fontSize: 15, color: colors.onPrimaryContainer }]}>Take Photo</Text>
+      </Pressable>
+      <Pressable
+        style={({ pressed }) => [styles.secondaryBtn, { backgroundColor: colors.surface, borderColor: colors.outlineVariant, ...makeShadow(colors, 'card') }, pressed && { transform: [{ scale: 0.98 }] }]}
+        onPress={() => pickImage(false)}
+      >
+        <MaterialIcons name="photo-library" size={22} color={colors.onSurfaceVariant} />
+        <Text style={[typography.label, { fontSize: 15, color: colors.onSurfaceVariant }]}>Choose from Library</Text>
+      </Pressable>
 
       {!user && (
-        <Text style={styles.trialText}>
-          Free trial: {Math.max(0, TRIAL_LIMIT - trialUsed)} of {TRIAL_LIMIT} analyses left
-          {'\n'}Log in for 6 free analyses per day
-        </Text>
+        <View style={[styles.trialPill, { backgroundColor: colors.primarySoft }]}>
+          <Eyebrow>{Math.max(0, TRIAL_LIMIT - trialUsed)} of {TRIAL_LIMIT} free analyses left</Eyebrow>
+        </View>
       )}
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a', padding: 24 },
-  centered: { justifyContent: 'center', alignItems: 'center' },
-  emoji: { fontSize: 48, marginBottom: 16 },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#fff', marginBottom: 8 },
-  subtitle: { fontSize: 15, color: '#94a3b8', textAlign: 'center', marginBottom: 32 },
-  primaryButton: {
-    backgroundColor: '#9333ea', borderRadius: 14, paddingVertical: 16,
-    paddingHorizontal: 32, width: '100%', marginBottom: 12,
+  heroIcon: { width: 96, height: 96, borderRadius: 48, alignItems: 'center', justifyContent: 'center' },
+  preview: { width: 200, height: 200, borderRadius: radius.lg },
+  primaryBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
+    borderRadius: radius.pill, paddingVertical: 16, width: '100%', marginTop: spacing.xl,
   },
-  primaryButtonText: { color: '#fff', textAlign: 'center', fontWeight: '600', fontSize: 17 },
-  secondaryButton: {
-    backgroundColor: '#1e293b', borderRadius: 14, paddingVertical: 16,
-    paddingHorizontal: 32, width: '100%', borderWidth: 1, borderColor: '#334155',
+  secondaryBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
+    borderRadius: radius.pill, paddingVertical: 16, width: '100%', marginTop: spacing.md, borderWidth: 1,
   },
-  secondaryButtonText: { color: '#e2e8f0', textAlign: 'center', fontWeight: '600', fontSize: 17 },
-  trialText: { color: '#64748b', fontSize: 13, textAlign: 'center', marginTop: 24, lineHeight: 20 },
-  preview: { width: 200, height: 200, borderRadius: 16 },
-  analyzingText: { color: '#fff', fontSize: 18, fontWeight: '600', marginTop: 16 },
-  analyzingSubtext: { color: '#94a3b8', fontSize: 14, marginTop: 4 },
+  trialPill: { borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, marginTop: spacing.xl },
 });

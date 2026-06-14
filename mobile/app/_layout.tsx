@@ -35,7 +35,7 @@ function RootNavigator() {
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="(auth)" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="analysis-result" options={{ ...header, title: 'Analysis' }} />
+      <Stack.Screen name="analysis-result" options={{ headerShown: false }} />
       <Stack.Screen name="practice-flashcards" options={{ ...header, title: 'Flashcards' }} />
       <Stack.Screen name="practice-quiz" options={{ ...header, title: 'Quiz' }} />
       <Stack.Screen name="practice-games" options={{ ...header, title: 'Games' }} />
