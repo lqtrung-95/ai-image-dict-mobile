@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, TextInput, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, TextInput, FlatList, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/lib/auth-context';
 import { LoginRequiredPrompt } from '../../src/components/login-required-prompt';
@@ -118,7 +118,6 @@ export default function VocabularyScreen() {
   );
 }
 
-import { StyleSheet } from 'react-native';
 const searchStyles = StyleSheet.create({
   bar: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderRadius: radius.md, borderWidth: 1, paddingHorizontal: spacing.md, paddingVertical: 12 },
 });
