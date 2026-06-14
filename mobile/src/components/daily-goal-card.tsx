@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
 import { fetchDailyGoals, setDailyGoal, DailyGoalsResponse } from '../lib/stats-service';
 import { TextInputModal } from './text-input-modal';
+import { useTheme } from '../theme/theme-context';
+import { spacing, radius, typography } from '../theme/theme';
+import { Icon } from '../theme/ui-primitives';
 
 // Daily review goal with progress bar. Tap "edit" to change the target.
 export function DailyGoalCard() {
+  const { colors } = useTheme();
   const [data, setData] = useState<DailyGoalsResponse | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
 
@@ -35,25 +39,28 @@ export function DailyGoalCard() {
   };
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.outlineVariant }]}>
       <View style={styles.headerRow}>
-        <Text style={styles.label}>🎯 Daily Goal</Text>
-        <TouchableOpacity onPress={() => setEditorOpen(true)}>
-          <Text style={styles.edit}>{reviewGoal ? 'Edit' : 'Set goal'}</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Icon name="track-changes" size={18} color={colors.primary} />
+          <Text style={[typography.heading, { fontSize: 15, color: colors.onSurface }]}>Daily Goal</Text>
+        </View>
+        <Pressable onPress={() => setEditorOpen(true)}>
+          <Text style={[typography.label, { fontSize: 13, color: colors.primary }]}>{reviewGoal ? 'Edit' : 'Set goal'}</Text>
+        </Pressable>
       </View>
 
       {reviewGoal ? (
         <View>
-          <Text style={styles.progressText}>
-            {done} / {target} reviews today {pct >= 100 ? '· done! 🎉' : ''}
+          <Text style={[typography.pinyin, { color: colors.onSurfaceVariant, marginBottom: spacing.xs }]}>
+            {done} / {target} reviews today {pct >= 100 ? '· done!' : ''}
           </Text>
-          <View style={styles.track}>
-            <View style={[styles.fill, { width: `${pct}%` }]} />
+          <View style={[styles.track, { backgroundColor: colors.background }]}>
+            <View style={[styles.fill, { width: `${pct}%`, backgroundColor: colors.primary }]} />
           </View>
         </View>
       ) : (
-        <Text style={styles.empty}>Set a daily review goal to build a streak.</Text>
+        <Text style={[typography.pinyin, { color: colors.outline }]}>Set a daily review goal to build a streak.</Text>
       )}
 
       <TextInputModal
@@ -71,15 +78,8 @@ export function DailyGoalCard() {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: '#1e293b', borderRadius: 14, padding: 16, marginBottom: 16,
-    borderWidth: 1, borderColor: '#334155',
-  },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
-  label: { color: '#e2e8f0', fontSize: 14, fontWeight: '600' },
-  edit: { color: '#a855f7', fontSize: 13, fontWeight: '600' },
-  progressText: { color: '#94a3b8', fontSize: 13, marginBottom: 8 },
-  track: { height: 8, backgroundColor: '#0f172a', borderRadius: 4, overflow: 'hidden' },
-  fill: { height: '100%', backgroundColor: '#22c55e' },
-  empty: { color: '#64748b', fontSize: 13 },
+  card: { borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.md, borderWidth: 1 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
+  track: { height: 8, borderRadius: 4, overflow: 'hidden' },
+  fill: { height: '100%' },
 });

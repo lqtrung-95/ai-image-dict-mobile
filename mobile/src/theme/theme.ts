@@ -82,6 +82,12 @@ export const darkColors: ThemeColors = {
   jadeShadowColor: '#000000',
 };
 
+// HSK level colors for distribution charts (harmonized, no neon)
+export const hskColors: Record<string, string> = {
+  hsk1: '#2d6a4f', hsk2: '#3f8f6b', hsk3: '#d9a14a',
+  hsk4: '#d98a4a', hsk5: '#ba181b', hsk6: '#8b7fd9', unclassified: '#89938b',
+};
+
 export const spacing = {
   base: 4,
   xs: 8,
