@@ -79,9 +79,33 @@ export interface WordOfDay {
   hsk_level?: number | null;
 }
 
-export async function fetchWordOfDay(): Promise<WordOfDay | null> {
+export interface WordOfDayResponse {
+  word: WordOfDay;
+  alreadySaved: boolean;
+}
+
+export async function fetchWordOfDay(): Promise<WordOfDayResponse | null> {
   const res = await apiFetch('/api/word-of-day');
   if (!res.ok) return null;
   const data = await res.json();
-  return data.word ?? null;
+  if (!data.word) return null;
+  return { word: data.word, alreadySaved: data.alreadySaved ?? false };
+}
+
+// Save the word of the day into the user's vocabulary library
+export async function saveWordOfDay(word: WordOfDay): Promise<void> {
+  const res = await apiFetch('/api/vocabulary', {
+    method: 'POST',
+    body: JSON.stringify({
+      wordZh: word.word_zh,
+      wordPinyin: word.word_pinyin,
+      wordEn: word.word_en,
+      exampleSentence: word.example_sentence ?? undefined,
+      hskLevel: word.hsk_level ?? undefined,
+    }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error ?? 'Failed to save word');
+  }
 }
