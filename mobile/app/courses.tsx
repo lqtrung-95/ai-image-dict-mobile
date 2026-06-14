@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView,
-} from 'react-native';
+import { View, Text, TextInput, FlatList, Pressable, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { fetchCourses, Course, CourseSort } from '../src/lib/courses-service';
+import { useTheme } from '../src/theme/theme-context';
+import { spacing, radius, typography, fonts, makeShadow } from '../src/theme/theme';
+import { Icon } from '../src/theme/ui-primitives';
 
 const SORTS: { value: CourseSort; label: string }[] = [
   { value: 'newest', label: 'Newest' },
@@ -13,6 +14,7 @@ const SORTS: { value: CourseSort; label: string }[] = [
 
 export default function CoursesScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -25,105 +27,94 @@ export default function CoursesScreen() {
     setLoading(true);
     try {
       const data = await fetchCourses({ page, difficulty, sort, q: search });
-      setCourses(data.courses);
-      setTotalPages(data.totalPages);
-    } catch {
-      // keep prior
-    } finally {
-      setLoading(false);
-    }
+      setCourses(data.courses); setTotalPages(data.totalPages);
+    } catch { /* keep prior */ } finally { setLoading(false); }
   }, [page, difficulty, sort, search]);
 
-  // Debounce search; immediate for filter/page changes
   useEffect(() => {
     const timer = setTimeout(load, search ? 350 : 0);
     return () => clearTimeout(timer);
   }, [load, search]);
 
-  return (
-    <View style={styles.container}>
-      <TextInput
-        style={styles.search}
-        placeholder="Search courses…"
-        placeholderTextColor="#64748b"
-        value={search}
-        onChangeText={(t) => { setSearch(t); setPage(1); }}
-        autoCapitalize="none"
-      />
+  const chipStyle = (active: boolean) => ({
+    backgroundColor: active ? colors.primarySoft : colors.surface,
+    borderRadius: radius.pill, paddingVertical: 8, paddingHorizontal: 14,
+    borderWidth: 1, borderColor: active ? colors.primary : colors.outlineVariant,
+  });
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow} contentContainerStyle={{ gap: 8 }}>
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.background, padding: spacing.containerMargin }}>
+      <View style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.outlineVariant }]}>
+        <Icon name="search" size={20} color={colors.outline} />
+        <TextInput
+          style={{ flex: 1, color: colors.onSurface, fontFamily: fonts.body, fontSize: 15 }}
+          placeholder="Search courses…"
+          placeholderTextColor={colors.outline}
+          value={search}
+          onChangeText={(t) => { setSearch(t); setPage(1); }}
+          autoCapitalize="none"
+        />
+      </View>
+
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, marginVertical: spacing.md }} contentContainerStyle={{ gap: spacing.xs }}>
         {SORTS.map((s) => (
-          <TouchableOpacity
-            key={s.value}
-            style={[styles.chip, sort === s.value && styles.chipActive]}
-            onPress={() => { setSort(s.value); setPage(1); }}
-          >
-            <Text style={styles.chipText}>{s.label}</Text>
-          </TouchableOpacity>
+          <Pressable key={s.value} style={chipStyle(sort === s.value)} onPress={() => { setSort(s.value); setPage(1); }}>
+            <Text style={[typography.label, { fontSize: 12, color: colors.onSurface }]}>{s.label}</Text>
+          </Pressable>
         ))}
-        <View style={styles.chipDivider} />
-        <TouchableOpacity
-          style={[styles.chip, difficulty === 'all' && styles.chipActive]}
-          onPress={() => { setDifficulty('all'); setPage(1); }}
-        >
-          <Text style={styles.chipText}>All HSK</Text>
-        </TouchableOpacity>
+        <View style={{ width: 1, backgroundColor: colors.outlineVariant, marginHorizontal: 4 }} />
+        <Pressable style={chipStyle(difficulty === 'all')} onPress={() => { setDifficulty('all'); setPage(1); }}>
+          <Text style={[typography.label, { fontSize: 12, color: colors.onSurface }]}>All HSK</Text>
+        </Pressable>
         {[1, 2, 3, 4, 5, 6].map((lvl) => (
-          <TouchableOpacity
-            key={lvl}
-            style={[styles.chip, difficulty === String(lvl) && styles.chipActive]}
-            onPress={() => { setDifficulty(String(lvl)); setPage(1); }}
-          >
-            <Text style={styles.chipText}>HSK {lvl}</Text>
-          </TouchableOpacity>
+          <Pressable key={lvl} style={chipStyle(difficulty === String(lvl))} onPress={() => { setDifficulty(String(lvl)); setPage(1); }}>
+            <Text style={[typography.label, { fontSize: 12, color: colors.onSurface }]}>HSK {lvl}</Text>
+          </Pressable>
         ))}
       </ScrollView>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#a855f7" style={{ marginTop: 48 }} />
+        <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 48 }} />
       ) : (
         <FlatList
           data={courses}
           keyExtractor={(c) => c.id}
-          contentContainerStyle={{ paddingBottom: 24 }}
+          contentContainerStyle={{ paddingBottom: 120 }}
           ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={styles.emptyEmoji}>🎓</Text>
-              <Text style={styles.emptyText}>No courses found. Courses can be created on the web app.</Text>
+            <View style={{ alignItems: 'center', marginTop: 64 }}>
+              <Icon name="school" size={44} color={colors.outline} />
+              <Text style={[typography.body, { color: colors.onSurfaceVariant, textAlign: 'center', marginTop: spacing.md, paddingHorizontal: spacing.xl }]}>
+                No courses found. Courses can be created on the web app.
+              </Text>
             </View>
           }
           renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.card}
-              onPress={() => router.push({ pathname: '/course-detail', params: { id: item.id } })}
-            >
-              <View style={styles.cardHeader}>
-                <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
-                <View style={styles.hskBadge}>
-                  <Text style={styles.hskText}>HSK {item.difficultyLevel}</Text>
+            <Pressable style={[styles.card, { backgroundColor: colors.surface, ...makeShadow(colors, 'card') }]} onPress={() => router.push({ pathname: '/course-detail', params: { id: item.id } })}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                <Text style={[typography.heading, { color: colors.onSurface, flex: 1 }]} numberOfLines={1}>{item.name}</Text>
+                <View style={{ backgroundColor: colors.primarySoft, borderRadius: radius.sm, paddingHorizontal: 8, paddingVertical: 3 }}>
+                  <Text style={[typography.label, { fontSize: 11, color: colors.primary }]}>HSK {item.difficultyLevel}</Text>
                 </View>
               </View>
-              {item.description ? (
-                <Text style={styles.desc} numberOfLines={2}>{item.description}</Text>
-              ) : null}
-              <Text style={styles.meta}>
+              {item.description ? <Text style={[typography.pinyin, { color: colors.onSurfaceVariant, marginTop: 6 }]} numberOfLines={2}>{item.description}</Text> : null}
+              <Text style={[typography.label, { fontSize: 12, color: colors.outline, marginTop: spacing.sm }]}>
                 {item.wordCount} words · {item.subscriberCount} learners
                 {item.ratingAvg != null ? ` · ★ ${item.ratingAvg.toFixed(1)} (${item.ratingCount})` : ''}
                 {item.creatorName ? ` · by ${item.creatorName}` : ''}
               </Text>
-              {item.isSubscribed && <Text style={styles.subscribed}>✓ Subscribed</Text>}
-            </TouchableOpacity>
+              {item.isSubscribed && <Text style={[typography.label, { fontSize: 12, color: colors.primary, marginTop: 6 }]}>✓ Subscribed</Text>}
+            </Pressable>
           )}
           ListFooterComponent={
             totalPages > 1 ? (
               <View style={styles.pager}>
-                <TouchableOpacity disabled={page <= 1} onPress={() => setPage((p) => p - 1)}>
-                  <Text style={[styles.pagerBtn, page <= 1 && styles.pagerDisabled]}>‹ Prev</Text>
-                </TouchableOpacity>
-                <Text style={styles.pagerText}>{page} / {totalPages}</Text>
-                <TouchableOpacity disabled={page >= totalPages} onPress={() => setPage((p) => p + 1)}>
-                  <Text style={[styles.pagerBtn, page >= totalPages && styles.pagerDisabled]}>Next ›</Text>
-                </TouchableOpacity>
+                <Pressable disabled={page <= 1} onPress={() => setPage((p) => p - 1)}>
+                  <Text style={[typography.label, { fontSize: 14, color: page <= 1 ? colors.outlineVariant : colors.primary }]}>‹ Prev</Text>
+                </Pressable>
+                <Text style={[typography.label, { fontSize: 13, color: colors.onSurfaceVariant }]}>{page} / {totalPages}</Text>
+                <Pressable disabled={page >= totalPages} onPress={() => setPage((p) => p + 1)}>
+                  <Text style={[typography.label, { fontSize: 14, color: page >= totalPages ? colors.outlineVariant : colors.primary }]}>Next ›</Text>
+                </Pressable>
               </View>
             ) : null
           }
@@ -134,32 +125,7 @@ export default function CoursesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a', padding: 16 },
-  search: {
-    backgroundColor: '#1e293b', borderRadius: 12, padding: 14, color: '#fff',
-    borderWidth: 1, borderColor: '#334155', marginBottom: 10,
-  },
-  filterRow: { flexGrow: 0, marginBottom: 12 },
-  chip: {
-    backgroundColor: '#1e293b', borderRadius: 18, paddingVertical: 8, paddingHorizontal: 14,
-    borderWidth: 1, borderColor: '#334155',
-  },
-  chipActive: { borderColor: '#a855f7', backgroundColor: '#9333ea22' },
-  chipText: { color: '#e2e8f0', fontSize: 13 },
-  chipDivider: { width: 1, backgroundColor: '#334155', marginHorizontal: 4 },
-  empty: { alignItems: 'center', marginTop: 64 },
-  emptyEmoji: { fontSize: 40, marginBottom: 12 },
-  emptyText: { color: '#94a3b8', textAlign: 'center', paddingHorizontal: 32 },
-  card: { backgroundColor: '#1e293b', borderRadius: 14, padding: 16, marginBottom: 12 },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  name: { color: '#fff', fontSize: 17, fontWeight: '600', flex: 1 },
-  hskBadge: { backgroundColor: '#9333ea33', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  hskText: { color: '#c4b5fd', fontSize: 11, fontWeight: '600' },
-  desc: { color: '#94a3b8', fontSize: 13, marginTop: 6, lineHeight: 18 },
-  meta: { color: '#64748b', fontSize: 12, marginTop: 8 },
-  subscribed: { color: '#4ade80', fontSize: 12, marginTop: 6, fontWeight: '600' },
-  pager: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 20, paddingVertical: 16 },
-  pagerBtn: { color: '#a855f7', fontSize: 15, fontWeight: '600' },
-  pagerDisabled: { color: '#475569' },
-  pagerText: { color: '#94a3b8', fontSize: 14 },
+  searchBar: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderRadius: radius.md, borderWidth: 1, paddingHorizontal: spacing.md, paddingVertical: 12 },
+  card: { borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.sm },
+  pager: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.lg, paddingVertical: spacing.md },
 });

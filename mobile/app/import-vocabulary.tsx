@@ -1,18 +1,20 @@
 import { useState } from 'react';
-import {
-  View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert,
-} from 'react-native';
+import { View, Text, TextInput, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { speakChinese } from '../src/lib/tts-speech-service';
 import { ListPickerRow } from '../src/components/list-picker-row';
 import {
   startImport, saveImportedWords, ImportSourceType, ExtractedWord, ImportPreview,
 } from '../src/lib/import-service';
+import { useTheme } from '../src/theme/theme-context';
+import { spacing, radius, typography, fonts } from '../src/theme/theme';
+import { Icon } from '../src/theme/ui-primitives';
 
 type Phase = 'input' | 'extracting' | 'preview' | 'saving';
 
 export default function ImportVocabularyScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const [phase, setPhase] = useState<Phase>('input');
   const [type, setType] = useState<ImportSourceType>('url');
   const [source, setSource] = useState('');
@@ -26,7 +28,6 @@ export default function ImportVocabularyScreen() {
     try {
       const result = await startImport(type, source.trim());
       setPreview(result);
-      // Pre-select everything; user deselects what they don't want
       setSelected(new Set(result.preview.map((_, i) => i)));
       setPhase('preview');
     } catch (err) {
@@ -49,20 +50,21 @@ export default function ImportVocabularyScreen() {
     try {
       const words: ExtractedWord[] = preview.preview.filter((_, i) => selected.has(i));
       const { saved } = await saveImportedWords(preview.importId, words, listId ?? undefined);
-      Alert.alert('Imported!', `${saved} words added to your vocabulary.`, [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
+      Alert.alert('Imported!', `${saved} words added to your vocabulary.`, [{ text: 'OK', onPress: () => router.back() }]);
     } catch (err) {
       Alert.alert('Save failed', err instanceof Error ? err.message : 'Try again');
       setPhase('preview');
     }
   };
 
+  const primaryBtn = (disabled?: boolean) => [styles.primaryBtn, { backgroundColor: colors.primaryContainer }, disabled && { opacity: 0.5 }];
+  const inputStyle = { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, color: colors.onSurface, borderWidth: 1, borderColor: colors.outlineVariant, marginBottom: spacing.md, fontFamily: fonts.body };
+
   if (phase === 'extracting' || phase === 'saving') {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" color="#a855f7" />
-        <Text style={styles.loadingText}>
+      <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[typography.body, { color: colors.onSurfaceVariant, marginTop: spacing.md }]}>
           {phase === 'extracting' ? 'AI is extracting vocabulary…' : 'Saving words…'}
         </Text>
       </View>
@@ -71,75 +73,67 @@ export default function ImportVocabularyScreen() {
 
   if (phase === 'preview' && preview) {
     return (
-      <ScrollView style={styles.container} contentContainerStyle={{ padding: 16, paddingBottom: 48 }}>
-        <Text style={styles.sourceTitle}>{preview.sourceTitle}</Text>
-        <Text style={styles.subtitle}>
+      <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.containerMargin, paddingBottom: 48 }}>
+        <Text style={[typography.heading, { color: colors.onSurface }]}>{preview.sourceTitle}</Text>
+        <Text style={[typography.pinyin, { color: colors.onSurfaceVariant, marginBottom: spacing.md }]}>
           {preview.preview.length} words found · {selected.size} selected (tap to toggle)
         </Text>
 
-        <View style={{ marginBottom: 16 }}>
+        <View style={{ marginBottom: spacing.md }}>
           <ListPickerRow selectedListId={listId} onSelect={setListId} />
         </View>
 
         {preview.preview.map((w, i) => {
           const isSel = selected.has(i);
           return (
-            <TouchableOpacity
+            <Pressable
               key={`${w.zh}-${i}`}
-              style={[styles.wordCard, isSel && styles.wordCardSelected]}
+              style={[styles.wordCard, { backgroundColor: colors.surface, borderColor: isSel ? colors.primary : colors.outlineVariant }]}
               onPress={() => toggleWord(i)}
               onLongPress={() => speakChinese(w.zh)}
             >
               <View style={{ flex: 1 }}>
-                <Text style={styles.wordZh}>{w.zh}</Text>
-                <Text style={styles.wordPinyin}>{w.pinyin}</Text>
-                <Text style={styles.wordEn}>{w.en}</Text>
+                <Text style={{ fontFamily: fonts.hanzi, fontSize: 18, color: colors.onSurface }}>{w.zh}</Text>
+                <Text style={[typography.pinyin, { color: colors.primary, marginTop: 1 }]}>{w.pinyin}</Text>
+                <Text style={[typography.pinyin, { color: colors.onSurfaceVariant, marginTop: 1 }]}>{w.en}</Text>
               </View>
-              <Text style={styles.checkmark}>{isSel ? '☑' : '☐'}</Text>
-            </TouchableOpacity>
+              <Icon name={isSel ? 'check-box' : 'check-box-outline-blank'} size={24} color={isSel ? colors.primary : colors.outline} />
+            </Pressable>
           );
         })}
 
-        <TouchableOpacity
-          style={[styles.primaryButton, selected.size === 0 && styles.disabled]}
-          onPress={handleSave}
-          disabled={selected.size === 0}
-        >
-          <Text style={styles.primaryButtonText}>Save {selected.size} words</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.secondaryButton} onPress={() => setPhase('input')}>
-          <Text style={styles.secondaryButtonText}>Start over</Text>
-        </TouchableOpacity>
+        <Pressable style={primaryBtn(selected.size === 0)} onPress={handleSave} disabled={selected.size === 0}>
+          <Text style={[typography.label, { fontSize: 15, color: colors.onPrimaryContainer }]}>Save {selected.size} words</Text>
+        </Pressable>
+        <Pressable style={{ padding: spacing.md, marginTop: 4 }} onPress={() => setPhase('input')}>
+          <Text style={[typography.label, { fontSize: 14, color: colors.onSurfaceVariant, textAlign: 'center' }]}>Start over</Text>
+        </Pressable>
       </ScrollView>
     );
   }
 
-  // input phase
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
-      <Text style={styles.subtitle}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.containerMargin }}>
+      <Text style={[typography.body, { color: colors.onSurfaceVariant, marginBottom: spacing.md }]}>
         Import Chinese vocabulary from a web article or pasted text. AI extracts the words for you.
       </Text>
 
       <View style={styles.segmentRow}>
-        <TouchableOpacity
-          style={[styles.segment, type === 'url' && styles.segmentActive]}
-          onPress={() => setType('url')}
-        >
-          <Text style={styles.segmentText}>🔗 From URL</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.segment, type === 'text' && styles.segmentActive]}
-          onPress={() => setType('text')}
-        >
-          <Text style={styles.segmentText}>📋 Paste Text</Text>
-        </TouchableOpacity>
+        {(['url', 'text'] as ImportSourceType[]).map((t) => (
+          <Pressable
+            key={t}
+            style={[styles.segment, { backgroundColor: type === t ? colors.primarySoft : colors.surface, borderColor: type === t ? colors.primary : colors.outlineVariant }]}
+            onPress={() => setType(t)}
+          >
+            <Text style={[typography.label, { fontSize: 14, color: colors.onSurface }]}>{t === 'url' ? 'From URL' : 'Paste Text'}</Text>
+          </Pressable>
+        ))}
       </View>
 
       <TextInput
-        style={[styles.input, type === 'text' && styles.textArea]}
+        style={[inputStyle, type === 'text' && { minHeight: 160, textAlignVertical: 'top' }]}
         placeholder={type === 'url' ? 'https://example.com/chinese-article' : 'Paste Chinese text here (min 50 characters)…'}
-        placeholderTextColor="#64748b"
+        placeholderTextColor={colors.outline}
         value={source}
         onChangeText={setSource}
         autoCapitalize="none"
@@ -148,50 +142,18 @@ export default function ImportVocabularyScreen() {
         keyboardType={type === 'url' ? 'url' : 'default'}
       />
 
-      <TouchableOpacity
-        style={[styles.primaryButton, !source.trim() && styles.disabled]}
-        onPress={handleExtract}
-        disabled={!source.trim()}
-      >
-        <Text style={styles.primaryButtonText}>Extract Vocabulary</Text>
-      </TouchableOpacity>
+      <Pressable style={primaryBtn(!source.trim())} onPress={handleExtract} disabled={!source.trim()}>
+        <Text style={[typography.label, { fontSize: 15, color: colors.onPrimaryContainer }]}>Extract Vocabulary</Text>
+      </Pressable>
 
-      <Text style={styles.hint}>Limit: 10 imports per hour</Text>
+      <Text style={[typography.label, { fontSize: 12, color: colors.outline, textAlign: 'center', marginTop: spacing.md }]}>Limit: 10 imports per hour</Text>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a' },
-  centered: { justifyContent: 'center', alignItems: 'center' },
-  loadingText: { color: '#94a3b8', marginTop: 16, fontSize: 15 },
-  subtitle: { color: '#94a3b8', fontSize: 14, lineHeight: 20, marginBottom: 16 },
-  sourceTitle: { color: '#fff', fontSize: 18, fontWeight: '600', marginBottom: 4 },
-  segmentRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
-  segment: {
-    flex: 1, backgroundColor: '#1e293b', borderRadius: 12, padding: 14,
-    borderWidth: 1, borderColor: '#334155',
-  },
-  segmentActive: { borderColor: '#a855f7', backgroundColor: '#9333ea22' },
-  segmentText: { color: '#e2e8f0', textAlign: 'center', fontWeight: '600', fontSize: 14 },
-  input: {
-    backgroundColor: '#1e293b', borderRadius: 12, padding: 14, color: '#fff',
-    borderWidth: 1, borderColor: '#334155', marginBottom: 16,
-  },
-  textArea: { minHeight: 160, textAlignVertical: 'top' },
-  primaryButton: { backgroundColor: '#9333ea', borderRadius: 12, padding: 16 },
-  primaryButtonText: { color: '#fff', textAlign: 'center', fontWeight: '600', fontSize: 16 },
-  secondaryButton: { padding: 14, marginTop: 4 },
-  secondaryButtonText: { color: '#94a3b8', textAlign: 'center', fontWeight: '600' },
-  disabled: { opacity: 0.5 },
-  hint: { color: '#64748b', fontSize: 12, textAlign: 'center', marginTop: 12 },
-  wordCard: {
-    backgroundColor: '#1e293b', borderRadius: 12, padding: 14, marginBottom: 8,
-    flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#334155',
-  },
-  wordCardSelected: { borderColor: '#a855f7' },
-  wordZh: { color: '#fff', fontSize: 18, fontWeight: '600' },
-  wordPinyin: { color: '#a855f7', fontSize: 13, marginTop: 1 },
-  wordEn: { color: '#94a3b8', fontSize: 13, marginTop: 1 },
-  checkmark: { fontSize: 22, color: '#a855f7' },
+  segmentRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
+  segment: { flex: 1, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, alignItems: 'center' },
+  primaryBtn: { borderRadius: radius.pill, padding: spacing.md, alignItems: 'center' },
+  wordCard: { borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.xs, flexDirection: 'row', alignItems: 'center', borderWidth: 1 },
 });

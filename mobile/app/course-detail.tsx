@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert,
-} from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { speakChinese } from '../src/lib/tts-speech-service';
 import {
   fetchCourseDetail, subscribeToCourse, unsubscribeFromCourse, rateCourse, CourseDetail,
 } from '../src/lib/courses-service';
+import { useTheme } from '../src/theme/theme-context';
+import { spacing, radius, typography, fonts } from '../src/theme/theme';
 
 export default function CourseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { colors } = useTheme();
   const [detail, setDetail] = useState<CourseDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -23,10 +24,10 @@ export default function CourseDetailScreen() {
   useEffect(() => { load(); }, [load]);
 
   if (error) {
-    return <View style={[styles.container, styles.centered]}><Text style={styles.error}>{error}</Text></View>;
+    return <View style={[styles.centered, { backgroundColor: colors.background }]}><Text style={[typography.body, { color: colors.error }]}>{error}</Text></View>;
   }
   if (!detail) {
-    return <View style={[styles.container, styles.centered]}><ActivityIndicator size="large" color="#a855f7" /></View>;
+    return <View style={[styles.centered, { backgroundColor: colors.background }]}><ActivityIndicator size="large" color={colors.primary} /></View>;
   }
 
   const { course, words } = detail;
@@ -56,79 +57,60 @@ export default function CourseDetailScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 16, paddingBottom: 48 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.containerMargin, paddingBottom: 48 }}>
       <Stack.Screen options={{ title: course.name }} />
 
-      <Text style={styles.name}>{course.name}</Text>
-      {course.description ? <Text style={styles.desc}>{course.description}</Text> : null}
-      <Text style={styles.meta}>
+      <Text style={[typography.headline, { color: colors.onSurface }]}>{course.name}</Text>
+      {course.description ? <Text style={[typography.body, { color: colors.onSurfaceVariant, marginTop: spacing.sm }]}>{course.description}</Text> : null}
+      <Text style={[typography.label, { fontSize: 13, color: colors.outline, marginTop: spacing.sm }]}>
         HSK {course.difficultyLevel} · {course.wordCount} words · {course.subscriberCount} learners
         {course.ratingAvg != null ? ` · ★ ${course.ratingAvg.toFixed(1)}` : ''}
       </Text>
 
-      <TouchableOpacity
-        style={[styles.subscribeButton, subscribed && styles.unsubscribeButton]}
+      <Pressable
+        style={[styles.subscribeBtn, subscribed ? { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.primary } : { backgroundColor: colors.primaryContainer }]}
         onPress={toggleSubscribe}
         disabled={busy}
       >
-        <Text style={styles.subscribeText}>
+        <Text style={[typography.label, { fontSize: 15, color: subscribed ? colors.primary : colors.onPrimaryContainer }]}>
           {busy ? '…' : subscribed ? '✓ Subscribed — tap to unsubscribe' : 'Subscribe to this course'}
         </Text>
-      </TouchableOpacity>
+      </Pressable>
 
       {subscribed && (
         <View style={styles.rateRow}>
-          <Text style={styles.rateLabel}>Your rating:</Text>
+          <Text style={[typography.body, { color: colors.onSurfaceVariant, marginRight: 4 }]}>Your rating:</Text>
           {[1, 2, 3, 4, 5].map((s) => (
-            <TouchableOpacity key={s} onPress={() => handleRate(s)}>
-              <Text style={styles.star}>{s <= myRating ? '★' : '☆'}</Text>
-            </TouchableOpacity>
+            <Pressable key={s} onPress={() => handleRate(s)}>
+              <Text style={{ color: '#d9a14a', fontSize: 26 }}>{s <= myRating ? '★' : '☆'}</Text>
+            </Pressable>
           ))}
         </View>
       )}
 
-      <Text style={styles.sectionTitle}>Words ({words.length})</Text>
+      <Text style={[typography.heading, { color: colors.onSurface, marginTop: spacing.lg, marginBottom: spacing.md }]}>Words ({words.length})</Text>
       {words.map((w) => (
-        <TouchableOpacity key={w.id} style={styles.wordCard} onPress={() => speakChinese(w.word_zh)}>
+        <Pressable key={w.id} style={[styles.wordCard, { backgroundColor: colors.surface }]} onPress={() => speakChinese(w.word_zh)}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.wordZh}>{w.word_zh}</Text>
-            <Text style={styles.wordPinyin}>{w.word_pinyin}</Text>
-            <Text style={styles.wordEn}>{w.word_en}</Text>
-            {w.example_sentence ? <Text style={styles.example}>{w.example_sentence}</Text> : null}
+            <Text style={{ fontFamily: fonts.hanzi, fontSize: 22, color: colors.onSurface }}>{w.word_zh}</Text>
+            <Text style={[typography.pinyin, { color: colors.primary, marginTop: 2 }]}>{w.word_pinyin}</Text>
+            <Text style={[typography.body, { color: colors.onSurfaceVariant, marginTop: 2 }]}>{w.word_en}</Text>
+            {w.example_sentence ? <Text style={[typography.pinyin, { color: colors.outline, marginTop: 6, fontStyle: 'italic' }]}>{w.example_sentence}</Text> : null}
           </View>
           {w.hsk_level != null && (
-            <View style={styles.hskBadge}><Text style={styles.hskText}>HSK {w.hsk_level}</Text></View>
+            <View style={{ backgroundColor: colors.primarySoft, borderRadius: radius.sm, paddingHorizontal: 8, paddingVertical: 3 }}>
+              <Text style={[typography.label, { fontSize: 11, color: colors.primary }]}>HSK {w.hsk_level}</Text>
+            </View>
           )}
-        </TouchableOpacity>
+        </Pressable>
       ))}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a' },
-  centered: { justifyContent: 'center', alignItems: 'center' },
-  error: { color: '#f87171' },
-  name: { color: '#fff', fontSize: 24, fontWeight: 'bold' },
-  desc: { color: '#cbd5e1', fontSize: 14, marginTop: 8, lineHeight: 20 },
-  meta: { color: '#64748b', fontSize: 13, marginTop: 8 },
-  subscribeButton: {
-    backgroundColor: '#9333ea', borderRadius: 12, padding: 16, marginTop: 16,
-  },
-  unsubscribeButton: { backgroundColor: '#1e293b', borderWidth: 1, borderColor: '#4ade80' },
-  subscribeText: { color: '#fff', textAlign: 'center', fontWeight: '600', fontSize: 15 },
-  rateRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14 },
-  rateLabel: { color: '#94a3b8', fontSize: 14, marginRight: 4 },
-  star: { color: '#eab308', fontSize: 26 },
-  sectionTitle: { color: '#fff', fontSize: 17, fontWeight: '600', marginTop: 24, marginBottom: 12 },
-  wordCard: {
-    backgroundColor: '#1e293b', borderRadius: 12, padding: 14, marginBottom: 10,
-    flexDirection: 'row', alignItems: 'flex-start',
-  },
-  wordZh: { color: '#fff', fontSize: 20, fontWeight: '600' },
-  wordPinyin: { color: '#a855f7', fontSize: 14, marginTop: 2 },
-  wordEn: { color: '#94a3b8', fontSize: 13, marginTop: 2 },
-  example: { color: '#64748b', fontSize: 12, marginTop: 6, fontStyle: 'italic' },
-  hskBadge: { backgroundColor: '#9333ea33', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  hskText: { color: '#c4b5fd', fontSize: 11, fontWeight: '600' },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  subscribeBtn: { borderRadius: radius.md, padding: spacing.md, marginTop: spacing.md, alignItems: 'center' },
+  rateRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.md },
+  wordCard: { borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.sm, flexDirection: 'row', alignItems: 'flex-start' },
 });
