@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ViewStyle } from 'react-native';
 import { speakChinese } from '../lib/tts-speech-service';
 import type { VocabularyItem } from '../lib/vocabulary-service';
+import { useTheme } from '../theme/theme-context';
+import { spacing, radius, typography, fonts } from '../theme/theme';
 
 interface Tile {
   key: string;
@@ -23,6 +25,7 @@ function shuffle<T>(arr: T[]): T[] {
 
 // Match each 汉字 tile to its English meaning. Correct pairs lock green.
 export function MatchingGame({ pool, onFinished }: { pool: VocabularyItem[]; onFinished: () => void }) {
+  const { colors } = useTheme();
   const [zhTiles, setZhTiles] = useState<Tile[]>([]);
   const [enTiles, setEnTiles] = useState<Tile[]>([]);
   const [selectedZh, setSelectedZh] = useState<string | null>(null);
@@ -62,41 +65,31 @@ export function MatchingGame({ pool, onFinished }: { pool: VocabularyItem[]; onF
     }
   };
 
-  const tileStyle = (tile: Tile, isSelected: boolean) => {
-    if (matched.has(tile.wordId)) return styles.matched;
-    if (tile.side === 'en' && wrong === tile.wordId) return styles.wrong;
-    if (isSelected) return styles.selected;
-    return styles.tile;
+  const tileStyle = (tile: Tile, isSelected: boolean): ViewStyle => {
+    if (matched.has(tile.wordId)) return { backgroundColor: colors.primarySoft, borderColor: colors.primary };
+    if (tile.side === 'en' && wrong === tile.wordId) return { backgroundColor: colors.errorContainer, borderColor: colors.error };
+    if (isSelected) return { backgroundColor: colors.surface, borderColor: colors.primary };
+    return { backgroundColor: colors.surface, borderColor: colors.outlineVariant };
   };
 
   return (
-    <View style={styles.board}>
-      <Text style={styles.progress}>
+    <View style={{ flex: 1 }}>
+      <Text style={[typography.label, { fontSize: 14, color: colors.onSurfaceVariant, textAlign: 'center', marginBottom: spacing.md }]}>
         Matched {matched.size} / {Math.min(PAIRS_PER_ROUND, pool.length)}
       </Text>
       <View style={styles.columns}>
         <View style={styles.column}>
           {zhTiles.map((tile) => (
-            <TouchableOpacity
-              key={tile.key}
-              style={[styles.tileBase, tileStyle(tile, selectedZh === tile.wordId)]}
-              onPress={() => handleZh(tile)}
-              disabled={matched.has(tile.wordId)}
-            >
-              <Text style={styles.zhText}>{tile.label}</Text>
-            </TouchableOpacity>
+            <Pressable key={tile.key} style={[styles.tileBase, tileStyle(tile, selectedZh === tile.wordId)]} onPress={() => handleZh(tile)} disabled={matched.has(tile.wordId)}>
+              <Text style={{ fontFamily: fonts.hanzi, fontSize: 24, color: colors.onSurface, textAlign: 'center' }}>{tile.label}</Text>
+            </Pressable>
           ))}
         </View>
         <View style={styles.column}>
           {enTiles.map((tile) => (
-            <TouchableOpacity
-              key={tile.key}
-              style={[styles.tileBase, tileStyle(tile, false)]}
-              onPress={() => handleEn(tile)}
-              disabled={matched.has(tile.wordId)}
-            >
-              <Text style={styles.enText}>{tile.label}</Text>
-            </TouchableOpacity>
+            <Pressable key={tile.key} style={[styles.tileBase, tileStyle(tile, false)]} onPress={() => handleEn(tile)} disabled={matched.has(tile.wordId)}>
+              <Text style={[typography.body, { color: colors.onSurface, textAlign: 'center' }]}>{tile.label}</Text>
+            </Pressable>
           ))}
         </View>
       </View>
@@ -105,17 +98,7 @@ export function MatchingGame({ pool, onFinished }: { pool: VocabularyItem[]; onF
 }
 
 const styles = StyleSheet.create({
-  board: { flex: 1 },
-  progress: { color: '#94a3b8', fontSize: 14, fontWeight: '600', textAlign: 'center', marginBottom: 16 },
-  columns: { flexDirection: 'row', gap: 12 },
-  column: { flex: 1, gap: 12 },
-  tileBase: {
-    borderRadius: 12, padding: 16, minHeight: 64, justifyContent: 'center', borderWidth: 1.5,
-  },
-  tile: { backgroundColor: '#1e293b', borderColor: '#334155' },
-  selected: { backgroundColor: '#1e293b', borderColor: '#a855f7' },
-  matched: { backgroundColor: '#16a34a33', borderColor: '#16a34a' },
-  wrong: { backgroundColor: '#dc262633', borderColor: '#dc2626' },
-  zhText: { color: '#fff', fontSize: 22, fontWeight: 'bold', textAlign: 'center' },
-  enText: { color: '#e2e8f0', fontSize: 15, textAlign: 'center' },
+  columns: { flexDirection: 'row', gap: spacing.sm },
+  column: { flex: 1, gap: spacing.sm },
+  tileBase: { borderRadius: radius.md, padding: spacing.md, minHeight: 64, justifyContent: 'center', borderWidth: 1.5 },
 });

@@ -1,17 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
-import { Stack } from 'expo-router';
+import { View, Text, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useAuth } from '../src/lib/auth-context';
 import { LoginRequiredPrompt } from '../src/components/login-required-prompt';
 import { PracticeFlashcard } from '../src/components/practice-flashcard';
-import {
-  fetchDueWords, submitAttempt, DueWord, SrsRating,
-} from '../src/lib/practice-service';
+import { PracticeStatusView } from '../src/components/practice-status-view';
+import { fetchDueWords, submitAttempt, DueWord, SrsRating } from '../src/lib/practice-service';
+import { useTheme } from '../src/theme/theme-context';
+import { spacing, radius, typography } from '../src/theme/theme';
 
 type SessionState = 'loading' | 'empty' | 'practicing' | 'done' | 'error';
 
 export default function PracticeScreen() {
   const { user } = useAuth();
+  const { colors } = useTheme();
   const [state, setState] = useState<SessionState>('loading');
   const [words, setWords] = useState<DueWord[]>([]);
   const [index, setIndex] = useState(0);
@@ -67,88 +68,50 @@ export default function PracticeScreen() {
 
   if (state === 'loading') {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" color="#a855f7" />
+      <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   if (state === 'error') {
-    return (
-      <View style={[styles.container, styles.centered]}>
-        <Text style={styles.subtitle}>Couldn't load practice words.</Text>
-        <TouchableOpacity style={styles.primaryButton} onPress={startSession}>
-          <Text style={styles.primaryButtonText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
-    );
+    return <PracticeStatusView icon="error-outline" title="Couldn't load words" subtitle="Please try again." actionLabel="Retry" onAction={startSession} />;
   }
 
   if (state === 'empty') {
-    return (
-      <View style={[styles.container, styles.centered]}>
-        <Text style={styles.bigEmoji}>🎉</Text>
-        <Text style={styles.title}>All caught up!</Text>
-        <Text style={styles.subtitle}>
-          No words due for review. Capture more photos or come back later.
-        </Text>
-      </View>
-    );
+    return <PracticeStatusView icon="celebration" title="All caught up!" subtitle="No words due for review. Capture more photos or come back later." />;
   }
 
   if (state === 'done') {
     const total = results.again + results.correct;
     return (
-      <View style={[styles.container, styles.centered]}>
-        <Text style={styles.bigEmoji}>✅</Text>
-        <Text style={styles.title}>Session complete!</Text>
-        <Text style={styles.subtitle}>
-          {results.correct} of {total} correct
-          {results.again > 0 ? ` — ${results.again} to review again soon` : ' — perfect run!'}
-        </Text>
-        <TouchableOpacity style={styles.primaryButton} onPress={startSession}>
-          <Text style={styles.primaryButtonText}>Practice More</Text>
-        </TouchableOpacity>
-      </View>
+      <PracticeStatusView
+        icon="check-circle"
+        title="Session complete!"
+        subtitle={`${results.correct} of ${total} correct${results.again > 0 ? ` — ${results.again} to review again soon` : ' — perfect run!'}`}
+        actionLabel="Practice More"
+        onAction={startSession}
+      />
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={{ flex: 1, backgroundColor: colors.background, padding: spacing.containerMargin }}>
       <View style={styles.progressRow}>
-        <Text style={styles.progressText}>
+        <Text style={[typography.label, { fontSize: 14, color: colors.onSurfaceVariant }]}>
           {index + 1} / {words.length}
         </Text>
-        <View style={styles.progressBar}>
-          <View
-            style={[styles.progressFill, { width: `${((index + 1) / words.length) * 100}%` }]}
-          />
+        <View style={[styles.progressBar, { backgroundColor: colors.surfaceContainerHigh }]}>
+          <View style={[styles.progressFill, { width: `${((index + 1) / words.length) * 100}%`, backgroundColor: colors.primary }]} />
         </View>
       </View>
-      <PracticeFlashcard
-        word={words[index]}
-        flipped={flipped}
-        onFlip={() => setFlipped(true)}
-        onRate={handleRate}
-      />
+      <PracticeFlashcard word={words[index]} flipped={flipped} onFlip={() => setFlipped(true)} onRate={handleRate} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a', padding: 20 },
-  centered: { justifyContent: 'center', alignItems: 'center' },
-  bigEmoji: { fontSize: 48, marginBottom: 16 },
-  title: { fontSize: 22, fontWeight: 'bold', color: '#fff', marginBottom: 8 },
-  subtitle: { fontSize: 15, color: '#94a3b8', textAlign: 'center', marginBottom: 24 },
-  primaryButton: {
-    backgroundColor: '#9333ea', borderRadius: 12, paddingVertical: 14, paddingHorizontal: 36,
-  },
-  primaryButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
-  progressRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
-  progressText: { color: '#94a3b8', fontSize: 14, fontWeight: '600' },
-  progressBar: {
-    flex: 1, height: 6, backgroundColor: '#1e293b', borderRadius: 3, overflow: 'hidden',
-  },
-  progressFill: { height: '100%', backgroundColor: '#a855f7' },
+  progressRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.sm },
+  progressBar: { flex: 1, height: 6, borderRadius: 3, overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 3 },
 });

@@ -1,42 +1,23 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text } from 'react-native';
 import { useRouter } from 'expo-router';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '../../src/lib/auth-context';
 import { LoginRequiredPrompt } from '../../src/components/login-required-prompt';
+import { Screen, Card, Icon } from '../../src/theme/ui-primitives';
+import { useTheme } from '../../src/theme/theme-context';
+import { spacing, radius, typography } from '../../src/theme/theme';
 
-interface ModeCard {
-  route: string;
-  emoji: string;
-  title: string;
-  subtitle: string;
-  accent: string;
-}
+type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
 
-const MODES: ModeCard[] = [
-  {
-    route: '/practice-flashcards',
-    emoji: '🎴',
-    title: 'Flashcards',
-    subtitle: 'Spaced repetition review of words due today',
-    accent: '#a855f7',
-  },
-  {
-    route: '/practice-quiz',
-    emoji: '❓',
-    title: 'Quiz',
-    subtitle: 'Multiple choice, listening, and type-pinyin challenges',
-    accent: '#22c55e',
-  },
-  {
-    route: '/practice-games',
-    emoji: '🎮',
-    title: 'Games',
-    subtitle: 'Matching and rapid-fire vocabulary games',
-    accent: '#3b82f6',
-  },
+const MODES: { route: string; icon: IconName; title: string; subtitle: string }[] = [
+  { route: '/practice-flashcards', icon: 'style', title: 'Flashcards', subtitle: 'Spaced repetition review of words due today' },
+  { route: '/practice-quiz', icon: 'quiz', title: 'Quiz', subtitle: 'Multiple choice, listening, and type-pinyin' },
+  { route: '/practice-games', icon: 'sports-esports', title: 'Games', subtitle: 'Matching and rapid-fire vocabulary games' },
 ];
 
 export default function PracticeMenuScreen() {
   const { user } = useAuth();
+  const { colors } = useTheme();
   const router = useRouter();
 
   if (!user) {
@@ -44,40 +25,26 @@ export default function PracticeMenuScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 20 }}>
-      <Text style={styles.heading}>Practice</Text>
-      <Text style={styles.subheading}>Pick a mode to strengthen your vocabulary.</Text>
+    <Screen scroll contentStyle={{ gap: spacing.md }}>
+      <Text style={[typography.headline, { color: colors.onSurface }]}>Practice</Text>
+      <Text style={[typography.body, { color: colors.onSurfaceVariant, marginTop: -spacing.xs }]}>
+        Pick a mode to strengthen your vocabulary.
+      </Text>
 
       {MODES.map((mode) => (
-        <TouchableOpacity
-          key={mode.route}
-          style={[styles.card, { borderColor: `${mode.accent}55` }]}
-          onPress={() => router.push(mode.route as never)}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.emoji}>{mode.emoji}</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.cardTitle}>{mode.title}</Text>
-            <Text style={styles.cardSubtitle}>{mode.subtitle}</Text>
+        <Card key={mode.route} onPress={() => router.push(mode.route as never)}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+            <View style={{ width: 48, height: 48, borderRadius: radius.md, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name={mode.icon} size={26} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[typography.heading, { color: colors.onSurface }]}>{mode.title}</Text>
+              <Text style={[typography.pinyin, { color: colors.outline, marginTop: 2 }]}>{mode.subtitle}</Text>
+            </View>
+            <Icon name="chevron-right" size={24} color={colors.outline} />
           </View>
-          <Text style={[styles.chevron, { color: mode.accent }]}>›</Text>
-        </TouchableOpacity>
+        </Card>
       ))}
-    </ScrollView>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a' },
-  heading: { fontSize: 28, fontWeight: 'bold', color: '#fff', marginTop: 8 },
-  subheading: { fontSize: 15, color: '#94a3b8', marginBottom: 24 },
-  card: {
-    flexDirection: 'row', alignItems: 'center', gap: 16,
-    backgroundColor: '#1e293b', borderRadius: 16, padding: 20, marginBottom: 14,
-    borderWidth: 1,
-  },
-  emoji: { fontSize: 32 },
-  cardTitle: { color: '#fff', fontSize: 18, fontWeight: '600' },
-  cardSubtitle: { color: '#94a3b8', fontSize: 13, marginTop: 4, lineHeight: 18 },
-  chevron: { fontSize: 28, fontWeight: '300' },
-});

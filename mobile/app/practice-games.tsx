@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  View, Text, TouchableOpacity, StyleSheet, ActivityIndicator,
-} from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { useAuth } from '../src/lib/auth-context';
 import { LoginRequiredPrompt } from '../src/components/login-required-prompt';
+import { PracticeStatusView } from '../src/components/practice-status-view';
 import { MatchingGame } from '../src/components/matching-game';
 import {
   loadQuizPool, buildChoiceQuestions, QuizQuestion, recordQuizAnswer, MIN_WORDS_FOR_QUIZ,
 } from '../src/lib/quiz-service';
 import type { VocabularyItem } from '../src/lib/vocabulary-service';
+import { useTheme } from '../src/theme/theme-context';
+import { spacing, radius, typography, fonts } from '../src/theme/theme';
+import { Icon, Card } from '../src/theme/ui-primitives';
 
 type Game = 'menu' | 'loading' | 'tooFew' | 'matching' | 'rapid' | 'rapidDone';
 
@@ -16,6 +18,7 @@ const RAPID_SECONDS = 30;
 
 export default function GamesScreen() {
   const { user } = useAuth();
+  const { colors } = useTheme();
   const [game, setGame] = useState<Game>('menu');
   const [pool, setPool] = useState<VocabularyItem[]>([]);
 
@@ -88,93 +91,82 @@ export default function GamesScreen() {
   // ---- render ----
 
   if (game === 'loading') {
-    return <View style={[styles.container, styles.centered]}><ActivityIndicator size="large" color="#a855f7" /></View>;
+    return <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" color={colors.primary} /></View>;
   }
 
   if (game === 'tooFew') {
-    return (
-      <View style={[styles.container, styles.centered]}>
-        <Text style={styles.bigEmoji}>📚</Text>
-        <Text style={styles.title}>Need more words</Text>
-        <Text style={styles.subtitle}>Save at least {MIN_WORDS_FOR_QUIZ} words to play games.</Text>
-        <TouchableOpacity style={styles.primaryButton} onPress={() => setGame('menu')}>
-          <Text style={styles.primaryButtonText}>Back</Text>
-        </TouchableOpacity>
-      </View>
-    );
+    return <PracticeStatusView icon="menu-book" title="Need more words" subtitle={`Save at least ${MIN_WORDS_FOR_QUIZ} words to play games.`} actionLabel="Back" onAction={() => setGame('menu')} />;
   }
 
   if (game === 'menu') {
     return (
-      <View style={styles.container}>
-        <TouchableOpacity style={styles.gameCard} onPress={() => launch('matching')}>
-          <Text style={styles.gameEmoji}>🧩</Text>
-          <Text style={styles.gameTitle}>Matching</Text>
-          <Text style={styles.gameDesc}>Pair each 汉字 with its English meaning</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.gameCard} onPress={() => launch('rapid')}>
-          <Text style={styles.gameEmoji}>⚡</Text>
-          <Text style={styles.gameTitle}>Rapid Fire</Text>
-          <Text style={styles.gameDesc}>Answer as many as you can in {RAPID_SECONDS}s</Text>
-        </TouchableOpacity>
+      <View style={{ flex: 1, backgroundColor: colors.background, padding: spacing.containerMargin, gap: spacing.md }}>
+        <Card onPress={() => launch('matching')}>
+          <View style={styles.gameCardInner}>
+            <Icon name="extension" size={36} color={colors.primary} />
+            <Text style={[typography.heading, { color: colors.onSurface, marginTop: spacing.sm }]}>Matching</Text>
+            <Text style={[typography.pinyin, { color: colors.outline, textAlign: 'center' }]}>Pair each 汉字 with its English meaning</Text>
+          </View>
+        </Card>
+        <Card onPress={() => launch('rapid')}>
+          <View style={styles.gameCardInner}>
+            <Icon name="bolt" size={36} color={colors.primary} />
+            <Text style={[typography.heading, { color: colors.onSurface, marginTop: spacing.sm }]}>Rapid Fire</Text>
+            <Text style={[typography.pinyin, { color: colors.outline, textAlign: 'center' }]}>Answer as many as you can in {RAPID_SECONDS}s</Text>
+          </View>
+        </Card>
       </View>
     );
   }
 
   if (game === 'matching') {
     return (
-      <View style={styles.container}>
+      <View style={{ flex: 1, backgroundColor: colors.background, padding: spacing.containerMargin }}>
         <MatchingGame pool={pool} onFinished={() => setGame('menu')} />
-        <TouchableOpacity style={styles.secondaryButton} onPress={() => setGame('menu')}>
-          <Text style={styles.secondaryButtonText}>Quit</Text>
-        </TouchableOpacity>
+        <Pressable style={{ paddingVertical: 14 }} onPress={() => setGame('menu')}>
+          <Text style={[typography.label, { fontSize: 14, color: colors.onSurfaceVariant, textAlign: 'center' }]}>Quit</Text>
+        </Pressable>
       </View>
     );
   }
 
   if (game === 'rapidDone') {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <Text style={styles.bigEmoji}>⚡</Text>
-        <Text style={styles.title}>{score} correct</Text>
-        <Text style={styles.subtitle}>in {RAPID_SECONDS} seconds</Text>
-        <TouchableOpacity style={styles.primaryButton} onPress={() => startRapid(pool)}>
-          <Text style={styles.primaryButtonText}>Play Again</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.secondaryButton} onPress={() => setGame('menu')}>
-          <Text style={styles.secondaryButtonText}>Back to Games</Text>
-        </TouchableOpacity>
-      </View>
+      <PracticeStatusView
+        icon="bolt"
+        title={`${score} correct`}
+        subtitle={`in ${RAPID_SECONDS} seconds`}
+        actionLabel="Play Again"
+        onAction={() => startRapid(pool)}
+        secondaryLabel="Back to Games"
+        onSecondary={() => setGame('menu')}
+      />
     );
   }
 
-  // rapid playing
   const q = questions[qIndex];
   return (
-    <View style={styles.container}>
+    <View style={{ flex: 1, backgroundColor: colors.background, padding: spacing.containerMargin }}>
       <View style={styles.rapidHeader}>
-        <Text style={styles.rapidScore}>Score {score}</Text>
-        <Text style={[styles.rapidTimer, timeLeft <= 5 && { color: '#ef4444' }]}>{timeLeft}s</Text>
+        <Text style={[typography.heading, { color: colors.primary }]}>Score {score}</Text>
+        <Text style={[typography.heading, { color: timeLeft <= 5 ? colors.error : colors.onSurface }]}>{timeLeft}s</Text>
       </View>
       <View style={styles.prompt}>
-        <Text style={styles.promptZh}>{q.word.wordZh}</Text>
+        <Text style={{ fontFamily: fonts.hanzi, fontSize: 64, color: colors.onSurface }}>{q.word.wordZh}</Text>
       </View>
-      <View style={styles.options}>
+      <View style={{ gap: spacing.sm }}>
         {q.options.map((opt, i) => {
-          let bg = '#1e293b';
+          let bg = colors.surface;
+          let border = colors.outlineVariant;
           if (picked !== null) {
-            if (i === q.correctIndex) bg = '#16a34a';
-            else if (i === picked) bg = '#dc2626';
+            if (i === q.correctIndex) { bg = colors.primaryContainer; border = colors.primaryContainer; }
+            else if (i === picked) { bg = colors.errorContainer; border = colors.error; }
           }
+          const txt = picked !== null && i === q.correctIndex ? colors.onPrimaryContainer : colors.onSurface;
           return (
-            <TouchableOpacity
-              key={i}
-              style={[styles.option, { backgroundColor: bg }]}
-              onPress={() => answerRapid(i)}
-              disabled={picked !== null}
-            >
-              <Text style={styles.optionText}>{opt}</Text>
-            </TouchableOpacity>
+            <Pressable key={i} style={[styles.option, { backgroundColor: bg, borderColor: border }]} onPress={() => answerRapid(i)} disabled={picked !== null}>
+              <Text style={[typography.body, { color: txt, textAlign: 'center' }]}>{opt}</Text>
+            </Pressable>
           );
         })}
       </View>
@@ -183,29 +175,8 @@ export default function GamesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a', padding: 20 },
-  centered: { justifyContent: 'center', alignItems: 'center' },
-  bigEmoji: { fontSize: 48, marginBottom: 16 },
-  title: { fontSize: 28, fontWeight: 'bold', color: '#fff', marginBottom: 8 },
-  subtitle: { fontSize: 15, color: '#94a3b8', textAlign: 'center', marginBottom: 24 },
-  gameCard: {
-    backgroundColor: '#1e293b', borderRadius: 16, padding: 24, marginBottom: 16, alignItems: 'center',
-  },
-  gameEmoji: { fontSize: 40, marginBottom: 8 },
-  gameTitle: { color: '#fff', fontSize: 20, fontWeight: '600' },
-  gameDesc: { color: '#94a3b8', fontSize: 13, marginTop: 4, textAlign: 'center' },
-  rapidHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 },
-  rapidScore: { color: '#a855f7', fontSize: 18, fontWeight: '700' },
-  rapidTimer: { color: '#fff', fontSize: 18, fontWeight: '700' },
-  prompt: { alignItems: 'center', marginVertical: 24 },
-  promptZh: { color: '#fff', fontSize: 56, fontWeight: 'bold' },
-  options: { gap: 12 },
-  option: { borderRadius: 12, padding: 18, borderWidth: 1, borderColor: '#334155' },
-  optionText: { color: '#e2e8f0', fontSize: 16, textAlign: 'center' },
-  primaryButton: {
-    backgroundColor: '#9333ea', borderRadius: 12, paddingVertical: 14, paddingHorizontal: 36, marginTop: 8,
-  },
-  primaryButtonText: { color: '#fff', fontWeight: '600', fontSize: 16, textAlign: 'center' },
-  secondaryButton: { paddingVertical: 14, marginTop: 4 },
-  secondaryButtonText: { color: '#94a3b8', fontWeight: '600', fontSize: 15, textAlign: 'center' },
+  gameCardInner: { alignItems: 'center', paddingVertical: spacing.sm },
+  rapidHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.lg },
+  prompt: { alignItems: 'center', marginVertical: spacing.lg },
+  option: { borderRadius: radius.md, padding: 18, borderWidth: 1 },
 });
