@@ -1,82 +1,123 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../src/lib/auth-context';
 import { WordOfDayCard } from '../../src/components/word-of-day-card';
+import { Screen, Card, Eyebrow, AppButton, Icon } from '../../src/theme/ui-primitives';
+import { useTheme } from '../../src/theme/theme-context';
+import { spacing, radius, typography, fonts, makeShadow } from '../../src/theme/theme';
 
-interface QuickLink {
-  route: string;
-  emoji: string;
-  title: string;
-  subtitle: string;
-  guestOk: boolean;
-}
+type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
 
-const QUICK_LINKS: QuickLink[] = [
-  { route: '/(tabs)/capture', emoji: '📷', title: 'Capture', subtitle: 'Analyze a photo', guestOk: true },
-  { route: '/(tabs)/vocabulary', emoji: '📚', title: 'My Words', subtitle: 'Browse your library', guestOk: false },
-  { route: '/lists', emoji: '🗂', title: 'Lists', subtitle: 'Organize into collections', guestOk: false },
-  { route: '/history', emoji: '🕘', title: 'History', subtitle: 'Past photo analyses', guestOk: false },
-  { route: '/stories', emoji: '📖', title: 'Stories', subtitle: 'Group photos into stories', guestOk: false },
-  { route: '/(tabs)/practice', emoji: '🎯', title: 'Practice', subtitle: 'Flashcards, quiz & games', guestOk: false },
-  { route: '/progress', emoji: '📈', title: 'Progress', subtitle: 'Streaks, stats & goals', guestOk: false },
-  { route: '/courses', emoji: '🎓', title: 'Courses', subtitle: 'Community word sets', guestOk: false },
-  { route: '/import-vocabulary', emoji: '📥', title: 'Import', subtitle: 'From articles or text', guestOk: false },
+interface QuickLink { route: string; icon: IconName; title: string; subtitle: string; guestOk: boolean }
+
+const LINKS: QuickLink[] = [
+  { route: '/(tabs)/vocabulary', icon: 'menu-book', title: 'Library', subtitle: 'Your saved words', guestOk: false },
+  { route: '/lists', icon: 'folder', title: 'Lists', subtitle: 'Collections', guestOk: false },
+  { route: '/history', icon: 'history', title: 'History', subtitle: 'Past analyses', guestOk: false },
+  { route: '/stories', icon: 'auto-stories', title: 'Stories', subtitle: 'Photo stories', guestOk: false },
+  { route: '/progress', icon: 'bar-chart', title: 'Progress', subtitle: 'Streaks & stats', guestOk: false },
+  { route: '/courses', icon: 'school', title: 'Courses', subtitle: 'Community sets', guestOk: false },
+  { route: '/import-vocabulary', icon: 'file-download', title: 'Import', subtitle: 'From text/URL', guestOk: false },
 ];
 
 export default function HomeScreen() {
   const { user } = useAuth();
+  const { colors } = useTheme();
   const router = useRouter();
+  const links = LINKS.filter((l) => user || l.guestOk);
 
-  const links = QUICK_LINKS.filter((l) => user || l.guestOk);
+  const greeting = (() => {
+    const h = new Date().getHours();
+    return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+  })();
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 20 }}>
-      <Text style={styles.greeting}>你好, {user?.displayName ?? 'there'}! 👋</Text>
-      <Text style={styles.subtitle}>
-        {user ? 'Ready to learn some Chinese?' : 'Capture a photo to start learning Chinese vocabulary.'}
-      </Text>
+    <Screen scroll contentStyle={{ paddingBottom: 120, gap: spacing.xl }}>
+      {/* Greeting */}
+      <View style={{ gap: spacing.base }}>
+        <Eyebrow>AI 词典 · Modern Sinologist</Eyebrow>
+        <Text style={[typography.headline, { color: colors.onSurface }]}>
+          {greeting}{user?.displayName ? `, ${user.displayName}` : ''}.
+        </Text>
+        <Text style={[typography.body, { color: colors.onSurfaceVariant }]}>
+          {user ? 'Ready to master your characters today?' : 'Snap a photo to start learning Chinese.'}
+        </Text>
+      </View>
 
       {user && <WordOfDayCard />}
 
-      <View style={styles.grid}>
-        {links.map((link) => (
-          <TouchableOpacity
-            key={link.route}
-            style={styles.tile}
-            onPress={() => router.push(link.route as never)}
-            activeOpacity={0.85}
+      {/* Quick Learning */}
+      <View style={{ gap: spacing.sm }}>
+        <Eyebrow>Quick Learning</Eyebrow>
+        <View style={{ flexDirection: 'row', gap: spacing.cardGutter }}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.quickPrimary,
+              { backgroundColor: colors.primaryContainer, ...makeShadow(colors, 'jade') },
+              pressed && { transform: [{ scale: 0.98 }] },
+            ]}
+            onPress={() => router.push('/(tabs)/capture')}
           >
-            <Text style={styles.tileEmoji}>{link.emoji}</Text>
-            <Text style={styles.tileTitle}>{link.title}</Text>
-            <Text style={styles.tileSubtitle}>{link.subtitle}</Text>
-          </TouchableOpacity>
-        ))}
+            <MaterialIcons name="photo-camera" size={30} color={colors.onPrimaryContainer} />
+            <Text style={[typography.label, { color: colors.onPrimaryContainer, fontSize: 13 }]}>Capture & Learn</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [
+              styles.quickSecondary,
+              { backgroundColor: colors.surface, borderColor: colors.outlineVariant, ...makeShadow(colors, 'card') },
+              pressed && { transform: [{ scale: 0.98 }] },
+            ]}
+            onPress={() => router.push(user ? '/practice-flashcards' : '/(auth)/login')}
+          >
+            <MaterialIcons name="history-edu" size={30} color={colors.onSurfaceVariant} />
+            <Text style={[typography.label, { color: colors.onSurfaceVariant, fontSize: 13 }]}>Daily Review</Text>
+          </Pressable>
+        </View>
       </View>
 
-      {!user && (
-        <TouchableOpacity style={styles.loginCard} onPress={() => router.push('/(auth)/login')}>
-          <Text style={styles.loginText}>Log in to unlock your library, practice, and more →</Text>
-        </TouchableOpacity>
+      {/* Explore grid */}
+      {links.length > 0 && (
+        <View style={{ gap: spacing.sm }}>
+          <Eyebrow>Explore</Eyebrow>
+          <View style={styles.grid}>
+            {links.map((link) => (
+              <Card key={link.route} onPress={() => router.push(link.route as never)} style={styles.tile}>
+                <View style={[styles.tileIcon, { backgroundColor: colors.primarySoft }]}>
+                  <Icon name={link.icon} size={22} color={colors.primary} />
+                </View>
+                <Text style={[typography.heading, { fontSize: 15, color: colors.onSurface, marginTop: spacing.sm }]}>
+                  {link.title}
+                </Text>
+                <Text style={[typography.pinyin, { color: colors.outline }]}>{link.subtitle}</Text>
+              </Card>
+            ))}
+          </View>
+        </View>
       )}
-    </ScrollView>
+
+      {!user && (
+        <Card>
+          <Text style={[typography.body, { color: colors.onSurfaceVariant, textAlign: 'center', marginBottom: spacing.sm }]}>
+            Log in to save words, track progress, and more.
+          </Text>
+          <AppButton label="Log in / Sign up" onPress={() => router.push('/(auth)/login')} />
+        </Card>
+      )}
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a' },
-  greeting: { fontSize: 26, fontWeight: 'bold', color: '#fff', marginTop: 8, marginBottom: 4 },
-  subtitle: { fontSize: 15, color: '#94a3b8', marginBottom: 24 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  tile: {
-    width: '47%', backgroundColor: '#1e293b', borderRadius: 16, padding: 18,
-    borderWidth: 1, borderColor: '#334155',
+  quickPrimary: {
+    flex: 1, borderRadius: radius.lg, paddingVertical: spacing.lg,
+    alignItems: 'center', gap: spacing.xs,
   },
-  tileEmoji: { fontSize: 28, marginBottom: 8 },
-  tileTitle: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  tileSubtitle: { color: '#94a3b8', fontSize: 12, marginTop: 2 },
-  loginCard: {
-    backgroundColor: '#9333ea22', borderColor: '#9333ea55', borderWidth: 1,
-    borderRadius: 14, padding: 16, marginTop: 20,
+  quickSecondary: {
+    flex: 1, borderRadius: radius.lg, paddingVertical: spacing.lg,
+    alignItems: 'center', gap: spacing.xs, borderWidth: 1,
   },
-  loginText: { color: '#c4b5fd', textAlign: 'center', fontSize: 14 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.cardGutter },
+  tile: { width: '47%', flexGrow: 1 },
+  tileIcon: { width: 40, height: 40, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
 });
