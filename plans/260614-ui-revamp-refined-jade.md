@@ -1,4 +1,13 @@
-# UI Revamp — "Refined Jade"
+# UI Revamp — "Modern Sinologist" (COMPLETE)
+
+> Superseded "Refined Jade" dark concept. Adopted the user's Stitch
+> "Modern Sinologist" design system (light + Midnight Ink dark). All ~20
+> mobile screens migrated to the theme; verified no slate/purple hex remain.
+> Fonts: Noto Serif / Plus Jakarta Sans / Work Sans. Light+dark toggle in Profile.
+
+---
+
+# UI Revamp — "Refined Jade" (original notes)
 
 Goal: remove the generic dark-slate + purple "AI fingerprint", introduce a centralized
 theme, depth (double-bezel cards), press physics, and editorial typography.
