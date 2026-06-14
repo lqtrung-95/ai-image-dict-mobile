@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert,
-} from 'react-native';
+import { Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useAuth } from '../../src/lib/auth-context';
+import { useTheme } from '../../src/theme/theme-context';
+import { spacing, radius, typography, fonts } from '../../src/theme/theme';
 
 export default function SignupScreen() {
   const { signup } = useAuth();
+  const { colors } = useTheme();
   const router = useRouter();
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
@@ -39,50 +40,24 @@ export default function SignupScreen() {
     }
   };
 
+  const inputStyle = { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, color: colors.onSurface, marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.outlineVariant, fontFamily: fonts.body, fontSize: 15 };
+
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <Text style={styles.logo}>AI词典</Text>
-      <Text style={styles.title}>Create your account</Text>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', padding: spacing.lg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <Text style={{ fontFamily: fonts.hanzi, fontSize: 44, textAlign: 'center', color: colors.primary }}>词典</Text>
+      <Text style={[typography.headline, { color: colors.onSurface, textAlign: 'center', marginTop: spacing.xs, marginBottom: spacing.xl }]}>Create your account</Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Display name (optional)"
-        placeholderTextColor="#64748b"
-        value={displayName}
-        onChangeText={setDisplayName}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        placeholderTextColor="#64748b"
-        autoCapitalize="none"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Password (min 8 characters)"
-        placeholderTextColor="#64748b"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
+      <TextInput style={inputStyle} placeholder="Display name (optional)" placeholderTextColor={colors.outline} value={displayName} onChangeText={setDisplayName} />
+      <TextInput style={inputStyle} placeholder="Email" placeholderTextColor={colors.outline} autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
+      <TextInput style={inputStyle} placeholder="Password (min 8 characters)" placeholderTextColor={colors.outline} secureTextEntry value={password} onChangeText={setPassword} />
 
-      <TouchableOpacity
-        style={[styles.button, submitting && styles.buttonDisabled]}
-        onPress={handleSignup}
-        disabled={submitting}
-      >
-        <Text style={styles.buttonText}>{submitting ? 'Creating account…' : 'Sign Up'}</Text>
-      </TouchableOpacity>
+      <Pressable style={[styles.primary, { backgroundColor: colors.primaryContainer }, submitting && { opacity: 0.6 }]} onPress={handleSignup} disabled={submitting}>
+        <Text style={[typography.label, { fontSize: 15, color: colors.onPrimaryContainer }]}>{submitting ? 'Creating account…' : 'Sign Up'}</Text>
+      </Pressable>
 
-      <Link href="/(auth)/login" style={styles.link}>
-        <Text style={styles.linkText}>
-          Already have an account? <Text style={styles.linkAccent}>Log in</Text>
+      <Link href="/(auth)/login" style={{ marginTop: spacing.lg, alignSelf: 'center' }}>
+        <Text style={[typography.body, { color: colors.onSurfaceVariant }]}>
+          Already have an account? <Text style={{ color: colors.primary, fontFamily: fonts.label }}>Log in</Text>
         </Text>
       </Link>
     </KeyboardAvoidingView>
@@ -90,17 +65,5 @@ export default function SignupScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a', justifyContent: 'center', padding: 24 },
-  logo: { fontSize: 40, textAlign: 'center', color: '#a855f7', fontWeight: 'bold', marginBottom: 8 },
-  title: { fontSize: 22, color: '#fff', textAlign: 'center', marginBottom: 32 },
-  input: {
-    backgroundColor: '#1e293b', borderRadius: 12, padding: 16, color: '#fff',
-    marginBottom: 12, borderWidth: 1, borderColor: '#334155',
-  },
-  button: { backgroundColor: '#9333ea', borderRadius: 12, padding: 16, marginTop: 8 },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: '#fff', textAlign: 'center', fontWeight: '600', fontSize: 16 },
-  link: { marginTop: 24, alignSelf: 'center' },
-  linkText: { color: '#94a3b8' },
-  linkAccent: { color: '#a855f7', fontWeight: '600' },
+  primary: { borderRadius: radius.pill, padding: spacing.md, marginTop: spacing.sm, alignItems: 'center' },
 });

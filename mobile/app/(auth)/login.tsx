@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import {
-  Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert, View,
-} from 'react-native';
+import { Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform, Alert, View } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useAuth } from '../../src/lib/auth-context';
+import { useTheme } from '../../src/theme/theme-context';
+import { spacing, radius, typography, fonts } from '../../src/theme/theme';
+import { Icon } from '../../src/theme/ui-primitives';
 
 export default function LoginScreen() {
   const { login, loginWithGoogle } = useAuth();
+  const { colors } = useTheme();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -42,61 +44,37 @@ export default function LoginScreen() {
     }
   };
 
+  const inputStyle = { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, color: colors.onSurface, marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.outlineVariant, fontFamily: fonts.body, fontSize: 15 };
+
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <TouchableOpacity style={styles.closeButton} onPress={dismissAfterLogin}>
-        <Text style={styles.closeText}>✕</Text>
-      </TouchableOpacity>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', padding: spacing.lg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <Pressable style={styles.close} onPress={dismissAfterLogin}>
+        <Icon name="close" size={24} color={colors.outline} />
+      </Pressable>
 
-      <Text style={styles.logo}>AI词典</Text>
-      <Text style={styles.title}>Welcome back</Text>
+      <Text style={{ fontFamily: fonts.hanzi, fontSize: 44, textAlign: 'center', color: colors.primary }}>词典</Text>
+      <Text style={[typography.headline, { color: colors.onSurface, textAlign: 'center', marginTop: spacing.xs, marginBottom: spacing.xl }]}>Welcome back</Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        placeholderTextColor="#64748b"
-        autoCapitalize="none"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        placeholderTextColor="#64748b"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
+      <TextInput style={inputStyle} placeholder="Email" placeholderTextColor={colors.outline} autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
+      <TextInput style={inputStyle} placeholder="Password" placeholderTextColor={colors.outline} secureTextEntry value={password} onChangeText={setPassword} />
 
-      <TouchableOpacity
-        style={[styles.button, submitting && styles.buttonDisabled]}
-        onPress={handleLogin}
-        disabled={submitting}
-      >
-        <Text style={styles.buttonText}>{submitting ? 'Logging in…' : 'Log In'}</Text>
-      </TouchableOpacity>
+      <Pressable style={[styles.primary, { backgroundColor: colors.primaryContainer }, submitting && { opacity: 0.6 }]} onPress={handleLogin} disabled={submitting}>
+        <Text style={[typography.label, { fontSize: 15, color: colors.onPrimaryContainer }]}>{submitting ? 'Logging in…' : 'Log In'}</Text>
+      </Pressable>
 
       <View style={styles.dividerRow}>
-        <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>or</Text>
-        <View style={styles.dividerLine} />
+        <View style={{ flex: 1, height: 1, backgroundColor: colors.outlineVariant }} />
+        <Text style={[typography.label, { fontSize: 12, color: colors.outline, marginHorizontal: spacing.md }]}>or</Text>
+        <View style={{ flex: 1, height: 1, backgroundColor: colors.outlineVariant }} />
       </View>
 
-      <TouchableOpacity
-        style={[styles.googleButton, submitting && styles.buttonDisabled]}
-        onPress={handleGoogle}
-        disabled={submitting}
-      >
-        <Text style={styles.googleButtonText}>Continue with Google</Text>
-      </TouchableOpacity>
+      <Pressable style={[styles.google, { backgroundColor: colors.surface, borderColor: colors.outlineVariant }, submitting && { opacity: 0.6 }]} onPress={handleGoogle} disabled={submitting}>
+        <Text style={[typography.label, { fontSize: 15, color: colors.onSurface }]}>Continue with Google</Text>
+      </Pressable>
 
-      <Link href="/(auth)/signup" style={styles.link}>
-        <Text style={styles.linkText}>
-          No account? <Text style={styles.linkAccent}>Sign up</Text>
+      <Link href="/(auth)/signup" style={{ marginTop: spacing.lg, alignSelf: 'center' }}>
+        <Text style={[typography.body, { color: colors.onSurfaceVariant }]}>
+          No account? <Text style={{ color: colors.primary, fontFamily: fonts.label }}>Sign up</Text>
         </Text>
       </Link>
     </KeyboardAvoidingView>
@@ -104,26 +82,8 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a', justifyContent: 'center', padding: 24 },
-  closeButton: { position: 'absolute', top: 24, right: 24, padding: 8, zIndex: 1 },
-  closeText: { color: '#94a3b8', fontSize: 20 },
-  logo: { fontSize: 40, textAlign: 'center', color: '#a855f7', fontWeight: 'bold', marginBottom: 8 },
-  title: { fontSize: 22, color: '#fff', textAlign: 'center', marginBottom: 32 },
-  input: {
-    backgroundColor: '#1e293b', borderRadius: 12, padding: 16, color: '#fff',
-    marginBottom: 12, borderWidth: 1, borderColor: '#334155',
-  },
-  button: { backgroundColor: '#9333ea', borderRadius: 12, padding: 16, marginTop: 8 },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: '#fff', textAlign: 'center', fontWeight: '600', fontSize: 16 },
-  dividerRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 20 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: '#334155' },
-  dividerText: { color: '#64748b', marginHorizontal: 12 },
-  googleButton: {
-    backgroundColor: '#fff', borderRadius: 12, padding: 16,
-  },
-  googleButtonText: { color: '#1f2937', textAlign: 'center', fontWeight: '600', fontSize: 16 },
-  link: { marginTop: 24, alignSelf: 'center' },
-  linkText: { color: '#94a3b8' },
-  linkAccent: { color: '#a855f7', fontWeight: '600' },
+  close: { position: 'absolute', top: 24, right: 24, padding: spacing.sm, zIndex: 1 },
+  primary: { borderRadius: radius.pill, padding: spacing.md, marginTop: spacing.sm, alignItems: 'center' },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', marginVertical: spacing.lg },
+  google: { borderRadius: radius.pill, padding: spacing.md, borderWidth: 1, alignItems: 'center' },
 });

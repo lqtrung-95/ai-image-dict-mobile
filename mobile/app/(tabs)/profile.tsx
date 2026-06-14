@@ -1,17 +1,17 @@
 import { useEffect, useState } from 'react';
-import {
-  View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView,
-} from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../src/lib/auth-context';
 import { exportVocabularyToAnki } from '../../src/lib/anki-export-service';
 import { TextInputModal } from '../../src/components/text-input-modal';
-import {
-  fetchProfile, updateDisplayName, exportAllUserData, deleteAccount,
-} from '../../src/lib/user-settings-service';
+import { fetchProfile, updateDisplayName, exportAllUserData, deleteAccount } from '../../src/lib/user-settings-service';
+import { Screen, Eyebrow, Icon, AppButton } from '../../src/theme/ui-primitives';
+import { useTheme, ThemeMode } from '../../src/theme/theme-context';
+import { spacing, radius, typography } from '../../src/theme/theme';
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
+  const { colors, mode, setMode } = useTheme();
   const router = useRouter();
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -26,147 +26,115 @@ export default function ProfileScreen() {
 
   if (!user) {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <Text style={styles.emoji}>👤</Text>
-        <Text style={styles.guestTitle}>You're browsing as a guest</Text>
-        <Text style={styles.guestSubtitle}>
+      <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: spacing.xl }}>
+        <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.lg }}>
+          <Icon name="person" size={40} color={colors.primary} />
+        </View>
+        <Text style={[typography.headline, { color: colors.onSurface, marginBottom: spacing.xs }]}>Browsing as guest</Text>
+        <Text style={[typography.body, { color: colors.onSurfaceVariant, textAlign: 'center', marginBottom: spacing.lg }]}>
           Log in to save vocabulary, track progress, and sync across devices.
         </Text>
-        <TouchableOpacity style={styles.loginButton} onPress={() => router.push('/(auth)/login')}>
-          <Text style={styles.loginButtonText}>Log In / Sign Up</Text>
-        </TouchableOpacity>
+        <AppButton label="Log in / Sign up" onPress={() => router.push('/(auth)/login')} />
+        <View style={{ marginTop: spacing.xl, width: '100%' }}>
+          <AppearanceToggle mode={mode} setMode={setMode} />
+        </View>
       </View>
     );
   }
 
   const run = async (key: string, fn: () => Promise<void>, errTitle: string) => {
     setBusy(key);
-    try {
-      await fn();
-    } catch (err) {
-      Alert.alert(errTitle, err instanceof Error ? err.message : 'Try again');
-    } finally {
-      setBusy(null);
-    }
+    try { await fn(); } catch (err) { Alert.alert(errTitle, err instanceof Error ? err.message : 'Try again'); } finally { setBusy(null); }
   };
 
   const submitName = async (name: string) => {
     setNameModalOpen(false);
-    await run('name', async () => {
-      await updateDisplayName(name);
-      setDisplayName(name);
-    }, 'Update failed');
+    await run('name', async () => { await updateDisplayName(name); setDisplayName(name); }, 'Update failed');
   };
 
   const confirmDeleteAccount = () => {
-    Alert.alert(
-      'Delete account?',
-      'This permanently deletes your account and ALL data — vocabulary, photos, progress. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete forever',
-          style: 'destructive',
-          onPress: () =>
-            Alert.alert('Are you absolutely sure?', 'Last chance to keep your data.', [
-              { text: 'Keep my account', style: 'cancel' },
-              {
-                text: 'Yes, delete everything',
-                style: 'destructive',
-                onPress: () =>
-                  run('delete', async () => {
-                    await deleteAccount();
-                    await logout();
-                  }, 'Deletion failed'),
-              },
-            ]),
-        },
-      ]
-    );
+    Alert.alert('Delete account?', 'This permanently deletes your account and ALL data — vocabulary, photos, progress. This cannot be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete forever', style: 'destructive',
+        onPress: () => Alert.alert('Are you absolutely sure?', 'Last chance to keep your data.', [
+          { text: 'Keep my account', style: 'cancel' },
+          { text: 'Yes, delete everything', style: 'destructive', onPress: () => run('delete', async () => { await deleteAccount(); await logout(); }, 'Deletion failed') },
+        ]),
+      },
+    ]);
   };
 
+  const actionRow = (icon: Parameters<typeof Icon>[0]['name'], label: string, onPress: () => void, danger?: boolean) => (
+    <Pressable
+      style={[styles.row, { backgroundColor: colors.surface, borderColor: danger ? colors.error : colors.outlineVariant }]}
+      onPress={onPress}
+      disabled={busy !== null}
+    >
+      <Icon name={icon} size={20} color={danger ? colors.error : colors.primary} />
+      <Text style={[typography.body, { color: danger ? colors.error : colors.onSurface, flex: 1 }]}>{label}</Text>
+      <Icon name="chevron-right" size={20} color={colors.outline} />
+    </Pressable>
+  );
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 24 }}>
-      <TouchableOpacity onPress={() => setNameModalOpen(true)}>
-        <Text style={styles.name}>{displayName ?? '—'} <Text style={styles.editHint}>✏️</Text></Text>
-      </TouchableOpacity>
+    <Screen scroll contentStyle={{ paddingBottom: 120 }}>
+      <Pressable style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }} onPress={() => setNameModalOpen(true)}>
+        <Text style={[typography.headline, { color: colors.onSurface }]}>{displayName ?? '—'}</Text>
+        <Icon name="edit" size={18} color={colors.outline} />
+      </Pressable>
+      <Text style={[typography.body, { color: colors.onSurfaceVariant, marginTop: 2 }]}>{user.email}</Text>
 
       <TextInputModal
         visible={nameModalOpen}
         title="Display name"
         message="How should we call you?"
-        placeholder="Your name"
         initialValue={displayName ?? ''}
         onSubmit={submitName}
         onCancel={() => setNameModalOpen(false)}
       />
-      <Text style={styles.email}>{user.email}</Text>
 
-      <Text style={styles.sectionLabel}>Data</Text>
-      <TouchableOpacity
-        style={styles.actionButton}
-        onPress={() => run('anki', exportVocabularyToAnki, 'Export failed')}
-        disabled={busy !== null}
-      >
-        <Text style={styles.actionText}>
-          {busy === 'anki' ? 'Preparing export…' : '📤 Export vocabulary to Anki'}
-        </Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.actionButton}
-        onPress={() => run('export', exportAllUserData, 'Export failed')}
-        disabled={busy !== null}
-      >
-        <Text style={styles.actionText}>
-          {busy === 'export' ? 'Preparing export…' : '📦 Download all my data (JSON)'}
-        </Text>
-      </TouchableOpacity>
+      <Eyebrow style={{ marginTop: spacing.xl, marginBottom: spacing.sm }}>Appearance</Eyebrow>
+      <AppearanceToggle mode={mode} setMode={setMode} />
 
-      <Text style={styles.sectionLabel}>Account</Text>
-      <TouchableOpacity style={styles.logoutButton} onPress={logout} disabled={busy !== null}>
-        <Text style={styles.logoutText}>Log Out</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.deleteButton}
-        onPress={confirmDeleteAccount}
-        disabled={busy !== null}
-      >
-        <Text style={styles.deleteText}>
-          {busy === 'delete' ? 'Deleting…' : 'Delete account & all data'}
-        </Text>
-      </TouchableOpacity>
-    </ScrollView>
+      <Eyebrow style={{ marginTop: spacing.xl, marginBottom: spacing.sm }}>Data</Eyebrow>
+      <View style={{ gap: spacing.sm }}>
+        {actionRow('ios-share', busy === 'anki' ? 'Preparing…' : 'Export vocabulary to Anki', () => run('anki', exportVocabularyToAnki, 'Export failed'))}
+        {actionRow('download', busy === 'export' ? 'Preparing…' : 'Download all my data (JSON)', () => run('export', exportAllUserData, 'Export failed'))}
+      </View>
+
+      <Eyebrow style={{ marginTop: spacing.xl, marginBottom: spacing.sm }}>Account</Eyebrow>
+      <View style={{ gap: spacing.sm }}>
+        {actionRow('logout', 'Log Out', logout)}
+        {actionRow('delete-outline', busy === 'delete' ? 'Deleting…' : 'Delete account & all data', confirmDeleteAccount, true)}
+      </View>
+    </Screen>
+  );
+}
+
+function AppearanceToggle({ mode, setMode }: { mode: ThemeMode; setMode: (m: ThemeMode) => void }) {
+  const { colors } = useTheme();
+  const opts: { value: ThemeMode; label: string }[] = [
+    { value: 'system', label: 'System' },
+    { value: 'light', label: 'Light' },
+    { value: 'dark', label: 'Dark' },
+  ];
+  return (
+    <View style={[styles.segment, { backgroundColor: colors.surface, borderColor: colors.outlineVariant }]}>
+      {opts.map((o) => {
+        const active = mode === o.value;
+        return (
+          <Pressable key={o.value} style={[styles.segmentItem, active && { backgroundColor: colors.primarySoft }]} onPress={() => setMode(o.value)}>
+            <Text style={[typography.label, { fontSize: 13, color: active ? colors.primary : colors.onSurfaceVariant }]}>{o.label}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a' },
-  centered: { justifyContent: 'center', alignItems: 'center', padding: 24 },
-  emoji: { fontSize: 40, marginBottom: 16 },
-  guestTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff', marginBottom: 8 },
-  guestSubtitle: { fontSize: 14, color: '#94a3b8', textAlign: 'center', marginBottom: 24 },
-  loginButton: { backgroundColor: '#9333ea', borderRadius: 12, paddingVertical: 14, paddingHorizontal: 32 },
-  loginButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
-  name: { fontSize: 24, fontWeight: 'bold', color: '#fff' },
-  editHint: { fontSize: 14 },
-  email: { fontSize: 14, color: '#94a3b8', marginTop: 4 },
-  sectionLabel: {
-    color: '#64748b', fontSize: 12, fontWeight: '700', textTransform: 'uppercase',
-    marginTop: 28, marginBottom: 10, letterSpacing: 1,
-  },
-  actionButton: {
-    backgroundColor: '#1e293b', borderRadius: 12, padding: 16, marginBottom: 10,
-    borderWidth: 1, borderColor: '#334155',
-  },
-  actionText: { color: '#e2e8f0', fontWeight: '600' },
-  logoutButton: {
-    backgroundColor: '#1e293b', borderRadius: 12, padding: 16, marginBottom: 10,
-    borderWidth: 1, borderColor: '#475569',
-  },
-  logoutText: { color: '#e2e8f0', textAlign: 'center', fontWeight: '600' },
-  deleteButton: {
-    backgroundColor: '#1e293b', borderRadius: 12, padding: 16,
-    borderWidth: 1, borderColor: '#ef4444',
-  },
-  deleteText: { color: '#ef4444', textAlign: 'center', fontWeight: '600' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderRadius: radius.md, padding: spacing.md, borderWidth: 1 },
+  segment: { flexDirection: 'row', borderRadius: radius.md, borderWidth: 1, padding: 4 },
+  segmentItem: { flex: 1, paddingVertical: 10, borderRadius: radius.sm, alignItems: 'center' },
 });
