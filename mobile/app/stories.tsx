@@ -1,12 +1,14 @@
 import { useCallback, useState } from 'react';
-import {
-  View, Text, StyleSheet, FlatList, Image, TouchableOpacity, ActivityIndicator, Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, FlatList, Image, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { fetchStories, deleteStory, PhotoStory } from '../src/lib/library-service';
+import { useTheme } from '../src/theme/theme-context';
+import { spacing, radius, typography, makeShadow } from '../src/theme/theme';
+import { Icon } from '../src/theme/ui-primitives';
 
 export default function StoriesScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const [stories, setStories] = useState<PhotoStory[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -41,65 +43,52 @@ export default function StoriesScreen() {
   };
 
   if (loading) {
-    return <View style={[styles.container, styles.centered]}><ActivityIndicator size="large" color="#a855f7" /></View>;
+    return <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" color={colors.primary} /></View>;
   }
 
   return (
-    <View style={styles.container}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <FlatList
         data={stories}
         keyExtractor={(s) => s.id}
-        contentContainerStyle={{ padding: 16 }}
+        contentContainerStyle={{ padding: spacing.containerMargin, paddingBottom: 120 }}
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyEmoji}>📖</Text>
-            <Text style={styles.emptyText}>No stories yet. Group your photos into a story!</Text>
+          <View style={{ alignItems: 'center', marginTop: 80 }}>
+            <Icon name="auto-stories" size={44} color={colors.outline} />
+            <Text style={[typography.body, { color: colors.onSurfaceVariant, textAlign: 'center', marginTop: spacing.md }]}>No stories yet. Group your photos into a story!</Text>
           </View>
         }
         renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.card}
+          <Pressable
+            style={[styles.card, { backgroundColor: colors.surface, ...makeShadow(colors, 'card') }]}
             onPress={() => router.push({ pathname: '/story-detail', params: { id: item.id } })}
             onLongPress={() => confirmDelete(item)}
           >
             {item.cover_image_url ? (
               <Image source={{ uri: item.cover_image_url }} style={styles.cover} />
             ) : (
-              <View style={[styles.cover, styles.coverPlaceholder]}>
-                <Text style={{ fontSize: 32 }}>📖</Text>
+              <View style={[styles.cover, { backgroundColor: colors.surfaceContainer, justifyContent: 'center', alignItems: 'center' }]}>
+                <Icon name="auto-stories" size={32} color={colors.outline} />
               </View>
             )}
-            <View style={styles.cardBody}>
-              <Text style={styles.title}>{item.title}</Text>
-              {item.description ? <Text style={styles.desc} numberOfLines={2}>{item.description}</Text> : null}
-              <Text style={styles.meta}>{item.photoCount} photos</Text>
+            <View style={{ padding: spacing.md }}>
+              <Text style={[typography.heading, { color: colors.onSurface }]}>{item.title}</Text>
+              {item.description ? <Text style={[typography.pinyin, { color: colors.onSurfaceVariant, marginTop: 4 }]} numberOfLines={2}>{item.description}</Text> : null}
+              <Text style={[typography.label, { fontSize: 12, color: colors.outline, marginTop: spacing.sm }]}>{item.photoCount} photos</Text>
             </View>
-          </TouchableOpacity>
+          </Pressable>
         )}
       />
-      <TouchableOpacity style={styles.fab} onPress={() => router.push('/story-create')}>
-        <Text style={styles.fabText}>+ New Story</Text>
-      </TouchableOpacity>
+      <Pressable style={[styles.fab, { backgroundColor: colors.primaryContainer, ...makeShadow(colors, 'jade') }]} onPress={() => router.push('/story-create')}>
+        <Icon name="add" size={20} color={colors.onPrimaryContainer} />
+        <Text style={[typography.label, { fontSize: 14, color: colors.onPrimaryContainer }]}>New Story</Text>
+      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a' },
-  centered: { justifyContent: 'center', alignItems: 'center' },
-  empty: { alignItems: 'center', marginTop: 80 },
-  emptyEmoji: { fontSize: 40, marginBottom: 12 },
-  emptyText: { color: '#94a3b8', textAlign: 'center', paddingHorizontal: 32 },
-  card: { backgroundColor: '#1e293b', borderRadius: 14, marginBottom: 14, overflow: 'hidden' },
+  card: { borderRadius: radius.lg, marginBottom: spacing.md, overflow: 'hidden' },
   cover: { width: '100%', height: 150 },
-  coverPlaceholder: { backgroundColor: '#0f172a', justifyContent: 'center', alignItems: 'center' },
-  cardBody: { padding: 14 },
-  title: { color: '#fff', fontSize: 18, fontWeight: '600' },
-  desc: { color: '#94a3b8', fontSize: 13, marginTop: 4 },
-  meta: { color: '#64748b', fontSize: 12, marginTop: 8 },
-  fab: {
-    position: 'absolute', bottom: 24, alignSelf: 'center',
-    backgroundColor: '#9333ea', borderRadius: 28, paddingVertical: 14, paddingHorizontal: 28,
-  },
-  fabText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  fab: { position: 'absolute', bottom: 24, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: radius.pill, paddingVertical: 14, paddingHorizontal: spacing.lg },
 });

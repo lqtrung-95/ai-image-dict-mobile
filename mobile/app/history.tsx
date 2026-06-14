@@ -1,14 +1,16 @@
 import { useCallback, useState } from 'react';
-import {
-  View, Text, StyleSheet, FlatList, Image, TouchableOpacity, ActivityIndicator, Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, FlatList, Image, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { speakChinese } from '../src/lib/tts-speech-service';
 import {
   fetchHistory, fetchAnalysisDetail, deleteAnalysis, HistoryAnalysis, HistoryWord,
 } from '../src/lib/library-service';
+import { useTheme } from '../src/theme/theme-context';
+import { spacing, radius, typography, fonts, makeShadow } from '../src/theme/theme';
+import { Icon } from '../src/theme/ui-primitives';
 
 export default function HistoryScreen() {
+  const { colors } = useTheme();
   const [analyses, setAnalyses] = useState<HistoryAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -58,52 +60,52 @@ export default function HistoryScreen() {
   };
 
   if (loading) {
-    return <View style={[styles.container, styles.centered]}><ActivityIndicator size="large" color="#a855f7" /></View>;
+    return <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" color={colors.primary} /></View>;
   }
 
   return (
     <FlatList
-      style={styles.container}
+      style={{ flex: 1, backgroundColor: colors.background }}
       data={analyses}
       keyExtractor={(a) => a.id}
-      contentContainerStyle={{ padding: 16 }}
+      contentContainerStyle={{ padding: spacing.containerMargin }}
       ListEmptyComponent={
-        <View style={styles.empty}>
-          <Text style={styles.emptyEmoji}>🕘</Text>
-          <Text style={styles.emptyText}>No analyses yet. Capture a photo to begin!</Text>
+        <View style={{ alignItems: 'center', marginTop: 80 }}>
+          <Icon name="history" size={44} color={colors.outline} />
+          <Text style={[typography.body, { color: colors.onSurfaceVariant, textAlign: 'center', marginTop: spacing.md }]}>No analyses yet. Capture a photo to begin!</Text>
         </View>
       }
       renderItem={({ item }) => {
         const expanded = expandedId === item.id;
         const words = wordsById[item.id];
         return (
-          <TouchableOpacity
-            style={styles.card}
+          <Pressable
+            style={[styles.card, { backgroundColor: colors.surface, ...makeShadow(colors, 'card') }]}
             onPress={() => (expanded ? setExpandedId(null) : expand(item.id))}
             onLongPress={() => confirmDelete(item)}
           >
             <Image source={{ uri: item.image_url }} style={styles.thumb} />
-            <Text style={styles.scene} numberOfLines={expanded ? undefined : 2}>
+            <Text style={[typography.body, { color: colors.onSurface }]} numberOfLines={expanded ? undefined : 2}>
               {item.scene_context?.description ?? 'No description'}
             </Text>
-            <Text style={styles.meta}>
+            <Text style={[typography.label, { fontSize: 12, color: colors.outline, marginTop: 6 }]}>
               {item.detected_objects.length} words · {new Date(item.created_at).toLocaleDateString()}
             </Text>
             {expanded && (
               words === undefined ? (
-                <ActivityIndicator color="#a855f7" style={{ marginTop: 12 }} />
+                <ActivityIndicator color={colors.primary} style={{ marginTop: 12 }} />
               ) : (
                 <View style={styles.words}>
                   {words.map((w) => (
-                    <TouchableOpacity key={w.id} style={styles.wordChip} onPress={() => speakChinese(w.zh)}>
-                      <Text style={styles.wordZh}>{w.zh}</Text>
-                      <Text style={styles.wordEn}>{w.en}</Text>
-                    </TouchableOpacity>
+                    <Pressable key={w.id} style={[styles.wordChip, { backgroundColor: colors.primarySoft }]} onPress={() => speakChinese(w.zh)}>
+                      <Text style={{ fontFamily: fonts.hanzi, fontSize: 16, color: colors.onSurface }}>{w.zh}</Text>
+                      <Text style={[typography.label, { fontSize: 10, color: colors.outline }]}>{w.en}</Text>
+                    </Pressable>
                   ))}
                 </View>
               )
             )}
-          </TouchableOpacity>
+          </Pressable>
         );
       }}
     />
@@ -111,17 +113,8 @@ export default function HistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a' },
-  centered: { justifyContent: 'center', alignItems: 'center' },
-  empty: { alignItems: 'center', marginTop: 80 },
-  emptyEmoji: { fontSize: 40, marginBottom: 12 },
-  emptyText: { color: '#94a3b8', textAlign: 'center', paddingHorizontal: 32 },
-  card: { backgroundColor: '#1e293b', borderRadius: 14, padding: 12, marginBottom: 14 },
-  thumb: { width: '100%', height: 160, borderRadius: 10, marginBottom: 10 },
-  scene: { color: '#e2e8f0', fontSize: 14, lineHeight: 20 },
-  meta: { color: '#64748b', fontSize: 12, marginTop: 6 },
-  words: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
-  wordChip: { backgroundColor: '#0f172a', borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10 },
-  wordZh: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  wordEn: { color: '#94a3b8', fontSize: 11 },
+  card: { borderRadius: radius.lg, padding: spacing.sm, marginBottom: spacing.md },
+  thumb: { width: '100%', height: 160, borderRadius: radius.md, marginBottom: spacing.sm },
+  words: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.sm },
+  wordChip: { borderRadius: radius.md, paddingVertical: 6, paddingHorizontal: 10, alignItems: 'center' },
 });

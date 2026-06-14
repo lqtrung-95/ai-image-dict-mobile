@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
-import {
-  View, Text, TextInput, StyleSheet, FlatList, Image, TouchableOpacity, Alert, ActivityIndicator,
-} from 'react-native';
+import { View, Text, TextInput, StyleSheet, FlatList, Image, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import {
-  fetchHistory, createStory, HistoryAnalysis,
-} from '../src/lib/library-service';
+import { fetchHistory, createStory, HistoryAnalysis } from '../src/lib/library-service';
+import { useTheme } from '../src/theme/theme-context';
+import { spacing, radius, typography, fonts } from '../src/theme/theme';
+import { Icon } from '../src/theme/ui-primitives';
 
 export default function StoryCreateScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [photos, setPhotos] = useState<HistoryAnalysis[]>([]);
@@ -42,60 +42,45 @@ export default function StoryCreateScreen() {
   };
 
   if (loading) {
-    return <View style={[styles.container, styles.centered]}><ActivityIndicator size="large" color="#a855f7" /></View>;
+    return <View style={[styles.center, { backgroundColor: colors.background }]}><ActivityIndicator size="large" color={colors.primary} /></View>;
   }
+
+  const inputStyle = { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, color: colors.onSurface, borderWidth: 1, borderColor: colors.outlineVariant, marginBottom: spacing.sm, fontFamily: fonts.body };
 
   return (
     <FlatList
-      style={styles.container}
+      style={{ flex: 1, backgroundColor: colors.background }}
       data={photos}
       keyExtractor={(p) => p.id}
       numColumns={3}
-      contentContainerStyle={{ padding: 12 }}
-      columnWrapperStyle={{ gap: 8 }}
+      contentContainerStyle={{ padding: spacing.sm }}
+      columnWrapperStyle={{ gap: spacing.xs }}
       ListHeaderComponent={
         <View>
-          <TextInput
-            style={styles.input}
-            placeholder="Story title"
-            placeholderTextColor="#64748b"
-            value={title}
-            onChangeText={setTitle}
-          />
-          <TextInput
-            style={[styles.input, { height: 70 }]}
-            placeholder="Description (optional)"
-            placeholderTextColor="#64748b"
-            value={description}
-            onChangeText={setDescription}
-            multiline
-          />
-          <Text style={styles.label}>
-            Select photos ({selected.size} chosen)
-          </Text>
-          {photos.length === 0 && (
-            <Text style={styles.empty}>No photos to add. Capture some first!</Text>
-          )}
+          <TextInput style={inputStyle} placeholder="Story title" placeholderTextColor={colors.outline} value={title} onChangeText={setTitle} />
+          <TextInput style={[inputStyle, { height: 70 }]} placeholder="Description (optional)" placeholderTextColor={colors.outline} value={description} onChangeText={setDescription} multiline />
+          <Text style={[typography.heading, { fontSize: 15, color: colors.onSurface, marginBottom: spacing.sm }]}>Select photos ({selected.size} chosen)</Text>
+          {photos.length === 0 && <Text style={[typography.body, { color: colors.onSurfaceVariant, textAlign: 'center', marginTop: spacing.lg }]}>No photos to add. Capture some first!</Text>}
         </View>
       }
       renderItem={({ item }) => {
         const isSel = selected.has(item.id);
         return (
-          <TouchableOpacity style={styles.photoWrap} onPress={() => toggle(item.id)}>
+          <Pressable style={styles.photoWrap} onPress={() => toggle(item.id)}>
             <Image source={{ uri: item.image_url }} style={styles.photo} />
-            {isSel && <View style={styles.checkOverlay}><Text style={styles.check}>✓</Text></View>}
-          </TouchableOpacity>
+            {isSel && <View style={[styles.checkOverlay, { backgroundColor: 'rgba(45,106,79,0.7)' }]}><Icon name="check" size={28} color="#fff" /></View>}
+          </Pressable>
         );
       }}
       ListFooterComponent={
         photos.length > 0 ? (
-          <TouchableOpacity
-            style={[styles.createButton, (saving || !title.trim() || selected.size === 0) && styles.disabled]}
+          <Pressable
+            style={[styles.createBtn, { backgroundColor: colors.primaryContainer }, (saving || !title.trim() || selected.size === 0) && { opacity: 0.5 }]}
             onPress={handleCreate}
             disabled={saving || !title.trim() || selected.size === 0}
           >
-            <Text style={styles.createText}>{saving ? 'Creating…' : 'Create Story'}</Text>
-          </TouchableOpacity>
+            <Text style={[typography.label, { fontSize: 15, color: colors.onPrimaryContainer }]}>{saving ? 'Creating…' : 'Create Story'}</Text>
+          </Pressable>
         ) : null
       }
     />
@@ -103,24 +88,9 @@ export default function StoryCreateScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a' },
-  centered: { justifyContent: 'center', alignItems: 'center' },
-  input: {
-    backgroundColor: '#1e293b', borderRadius: 10, padding: 14, color: '#fff',
-    borderWidth: 1, borderColor: '#334155', marginBottom: 12,
-  },
-  label: { color: '#e2e8f0', fontSize: 15, fontWeight: '600', marginBottom: 10 },
-  empty: { color: '#94a3b8', textAlign: 'center', marginTop: 24 },
-  photoWrap: { flex: 1 / 3, aspectRatio: 1, marginBottom: 8, borderRadius: 8, overflow: 'hidden' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  photoWrap: { flex: 1 / 3, aspectRatio: 1, marginBottom: spacing.xs, borderRadius: radius.md, overflow: 'hidden' },
   photo: { width: '100%', height: '100%' },
-  checkOverlay: {
-    ...StyleSheet.absoluteFillObject, backgroundColor: '#9333eaaa',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  check: { color: '#fff', fontSize: 28, fontWeight: 'bold' },
-  createButton: {
-    backgroundColor: '#9333ea', borderRadius: 12, padding: 16, marginTop: 16,
-  },
-  createText: { color: '#fff', textAlign: 'center', fontWeight: '600', fontSize: 16 },
-  disabled: { opacity: 0.5 },
+  checkOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center' },
+  createBtn: { borderRadius: radius.md, padding: spacing.md, marginTop: spacing.md, alignItems: 'center' },
 });
