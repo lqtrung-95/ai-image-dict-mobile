@@ -1,17 +1,18 @@
 import { useCallback, useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator,
-  TextInput, Modal, Alert,
+  View, Text, Pressable, StyleSheet, FlatList, ActivityIndicator, TextInput, Modal, Alert,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import {
-  fetchLists, createList, deleteList, VocabularyList,
-} from '../src/lib/library-service';
+import { fetchLists, createList, deleteList, VocabularyList } from '../src/lib/library-service';
+import { useTheme } from '../src/theme/theme-context';
+import { spacing, radius, typography, fonts, makeShadow } from '../src/theme/theme';
+import { Icon } from '../src/theme/ui-primitives';
 
-const COLORS = ['#a855f7', '#3b82f6', '#22c55e', '#f97316', '#ef4444', '#eab308'];
+const COLORS = ['#2d6a4f', '#3b82f6', '#d9a14a', '#ba181b', '#8b7fd9', '#0f766e'];
 
 export default function ListsScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const [lists, setLists] = useState<VocabularyList[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -20,16 +21,9 @@ export default function ListsScreen() {
   const [creating, setCreating] = useState(false);
 
   const load = useCallback(async () => {
-    try {
-      setLists(await fetchLists());
-    } catch {
-      // keep prior list on transient error
-    } finally {
-      setLoading(false);
-    }
+    try { setLists(await fetchLists()); } catch { /* keep prior */ } finally { setLoading(false); }
   }, []);
 
-  // Refresh on focus so new words/lists show after navigating back
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const handleCreate = async () => {
@@ -37,105 +31,102 @@ export default function ListsScreen() {
     setCreating(true);
     try {
       await createList(newName.trim(), newColor);
-      setModalOpen(false);
-      setNewName('');
-      setNewColor(COLORS[0]);
+      setModalOpen(false); setNewName(''); setNewColor(COLORS[0]);
       await load();
     } catch (err) {
       Alert.alert('Create failed', err instanceof Error ? err.message : 'Try again');
-    } finally {
-      setCreating(false);
-    }
+    } finally { setCreating(false); }
   };
 
   const confirmDelete = (list: VocabularyList) => {
     Alert.alert('Delete list', `Delete "${list.name}"? Words stay in your vocabulary.`, [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Delete',
-        style: 'destructive',
+        text: 'Delete', style: 'destructive',
         onPress: async () => {
-          try {
-            await deleteList(list.id);
-            setLists((prev) => prev.filter((l) => l.id !== list.id));
-          } catch {
-            Alert.alert('Delete failed', 'Try again');
-          }
+          try { await deleteList(list.id); setLists((prev) => prev.filter((l) => l.id !== list.id)); }
+          catch { Alert.alert('Delete failed', 'Try again'); }
         },
       },
     ]);
   };
 
   if (loading) {
-    return <View style={[styles.container, styles.centered]}><ActivityIndicator size="large" color="#a855f7" /></View>;
+    return <View style={[styles.center, { backgroundColor: colors.background }]}><ActivityIndicator size="large" color={colors.primary} /></View>;
   }
 
   return (
-    <View style={styles.container}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <FlatList
         data={lists}
         keyExtractor={(l) => l.id}
-        contentContainerStyle={{ padding: 16 }}
+        contentContainerStyle={{ padding: spacing.containerMargin, paddingBottom: 120 }}
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyEmoji}>🗂</Text>
-            <Text style={styles.emptyText}>No lists yet. Create one to organize your words.</Text>
+          <View style={{ alignItems: 'center', marginTop: 80 }}>
+            <Icon name="folder-open" size={44} color={colors.outline} />
+            <Text style={[typography.body, { color: colors.onSurfaceVariant, textAlign: 'center', marginTop: spacing.md }]}>
+              No lists yet. Create one to organize your words.
+            </Text>
           </View>
         }
         renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.card}
+          <Pressable
+            style={[styles.card, { backgroundColor: colors.surface, ...makeShadow(colors, 'card') }]}
             onPress={() => router.push({ pathname: '/list-detail', params: { id: item.id, name: item.name } })}
             onLongPress={() => confirmDelete(item)}
           >
             <View style={[styles.colorDot, { backgroundColor: item.color }]} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.listName}>{item.name}</Text>
-              <Text style={styles.listMeta}>
+              <Text style={[typography.heading, { color: colors.onSurface }]}>{item.name}</Text>
+              <Text style={[typography.pinyin, { color: colors.outline, marginTop: 2 }]}>
                 {item.wordCount} words · {item.learnedCount} learned
               </Text>
             </View>
-            <Text style={styles.chevron}>›</Text>
-          </TouchableOpacity>
+            <Icon name="chevron-right" size={24} color={colors.outline} />
+          </Pressable>
         )}
       />
 
-      <TouchableOpacity style={styles.fab} onPress={() => setModalOpen(true)}>
-        <Text style={styles.fabText}>+ New List</Text>
-      </TouchableOpacity>
+      <Pressable
+        style={({ pressed }) => [styles.fab, { backgroundColor: colors.primaryContainer, ...makeShadow(colors, 'jade') }, pressed && { transform: [{ scale: 0.96 }] }]}
+        onPress={() => setModalOpen(true)}
+      >
+        <Icon name="add" size={20} color={colors.onPrimaryContainer} />
+        <Text style={[typography.label, { fontSize: 14, color: colors.onPrimaryContainer }]}>New List</Text>
+      </Pressable>
 
       <Modal visible={modalOpen} transparent animationType="fade" onRequestClose={() => setModalOpen(false)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>New List</Text>
+        <View style={styles.backdrop}>
+          <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
+            <Text style={[typography.heading, { color: colors.onSurface }]}>New List</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.background, color: colors.onSurface, borderColor: colors.outlineVariant, fontFamily: fonts.body }]}
               placeholder="List name"
-              placeholderTextColor="#64748b"
+              placeholderTextColor={colors.outline}
               value={newName}
               onChangeText={setNewName}
               autoFocus
             />
             <View style={styles.colorRow}>
               {COLORS.map((c) => (
-                <TouchableOpacity
+                <Pressable
                   key={c}
-                  style={[styles.colorChoice, { backgroundColor: c }, newColor === c && styles.colorChoiceActive]}
+                  style={[styles.colorChoice, { backgroundColor: c, borderColor: newColor === c ? colors.onSurface : 'transparent' }]}
                   onPress={() => setNewColor(c)}
                 />
               ))}
             </View>
             <View style={styles.modalActions}>
-              <TouchableOpacity onPress={() => setModalOpen(false)}>
-                <Text style={styles.cancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.createButton, !newName.trim() && styles.disabled]}
+              <Pressable onPress={() => setModalOpen(false)}>
+                <Text style={[typography.label, { fontSize: 14, color: colors.onSurfaceVariant }]}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.createBtn, { backgroundColor: colors.primaryContainer }, !newName.trim() && { opacity: 0.5 }]}
                 onPress={handleCreate}
                 disabled={!newName.trim() || creating}
               >
-                <Text style={styles.createButtonText}>{creating ? 'Creating…' : 'Create'}</Text>
-              </TouchableOpacity>
+                <Text style={[typography.label, { fontSize: 14, color: colors.onPrimaryContainer }]}>{creating ? 'Creating…' : 'Create'}</Text>
+              </Pressable>
             </View>
           </View>
         </View>
@@ -145,37 +136,15 @@ export default function ListsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a' },
-  centered: { justifyContent: 'center', alignItems: 'center' },
-  empty: { alignItems: 'center', marginTop: 80 },
-  emptyEmoji: { fontSize: 40, marginBottom: 12 },
-  emptyText: { color: '#94a3b8', textAlign: 'center', paddingHorizontal: 32 },
-  card: {
-    flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#1e293b',
-    borderRadius: 12, padding: 16, marginBottom: 10,
-  },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  card: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.sm },
   colorDot: { width: 14, height: 14, borderRadius: 7 },
-  listName: { color: '#fff', fontSize: 17, fontWeight: '600' },
-  listMeta: { color: '#94a3b8', fontSize: 13, marginTop: 2 },
-  chevron: { color: '#64748b', fontSize: 24 },
-  fab: {
-    position: 'absolute', bottom: 24, alignSelf: 'center',
-    backgroundColor: '#9333ea', borderRadius: 28, paddingVertical: 14, paddingHorizontal: 28,
-  },
-  fabText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  modalBackdrop: { flex: 1, backgroundColor: '#000000aa', justifyContent: 'center', padding: 24 },
-  modalCard: { backgroundColor: '#1e293b', borderRadius: 16, padding: 20 },
-  modalTitle: { color: '#fff', fontSize: 18, fontWeight: '700', marginBottom: 16 },
-  input: {
-    backgroundColor: '#0f172a', borderRadius: 10, padding: 14, color: '#fff',
-    borderWidth: 1, borderColor: '#334155', marginBottom: 16,
-  },
-  colorRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
-  colorChoice: { width: 32, height: 32, borderRadius: 16, borderWidth: 2, borderColor: 'transparent' },
-  colorChoiceActive: { borderColor: '#fff' },
-  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 20 },
-  cancelText: { color: '#94a3b8', fontSize: 15 },
-  createButton: { backgroundColor: '#9333ea', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 20 },
-  createButtonText: { color: '#fff', fontWeight: '600' },
-  disabled: { opacity: 0.5 },
+  fab: { position: 'absolute', bottom: 24, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: radius.pill, paddingVertical: 14, paddingHorizontal: spacing.lg },
+  backdrop: { flex: 1, backgroundColor: '#000000aa', justifyContent: 'center', padding: spacing.lg },
+  modalCard: { borderRadius: radius.lg, padding: spacing.lg },
+  input: { borderRadius: radius.md, padding: spacing.md, borderWidth: 1, marginTop: spacing.md, marginBottom: spacing.md },
+  colorRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
+  colorChoice: { width: 32, height: 32, borderRadius: 16, borderWidth: 2 },
+  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: spacing.lg },
+  createBtn: { borderRadius: radius.md, paddingVertical: 10, paddingHorizontal: spacing.lg },
 });

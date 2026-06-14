@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
 import { speakChinese } from '../lib/tts-speech-service';
-import {
-  VocabularyItem, setWordLearned, deleteWord,
-} from '../lib/vocabulary-service';
+import { VocabularyItem, setWordLearned, deleteWord } from '../lib/vocabulary-service';
+import { useTheme } from '../theme/theme-context';
+import { spacing, radius, typography, fonts, makeShadow } from '../theme/theme';
+import { Icon } from '../theme/ui-primitives';
 
 interface Props {
   item: VocabularyItem;
@@ -11,8 +12,9 @@ interface Props {
   onLearnedChanged: (id: string, isLearned: boolean) => void;
 }
 
-// One row in the vocabulary list: tap to expand, speak, toggle learned, delete
+// One vocabulary row: rice-grid char + meaning, tap to expand for actions.
 export function VocabularyWordCard({ item, onDeleted, onLearnedChanged }: Props) {
+  const { colors } = useTheme();
   const [expanded, setExpanded] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -32,91 +34,86 @@ export function VocabularyWordCard({ item, onDeleted, onLearnedChanged }: Props)
     Alert.alert('Delete word', `Remove "${item.wordZh}" from your vocabulary?`, [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Delete',
-        style: 'destructive',
+        text: 'Delete', style: 'destructive',
         onPress: async () => {
-          try {
-            await deleteWord(item.id);
-            onDeleted(item.id);
-          } catch (err) {
-            Alert.alert('Delete failed', err instanceof Error ? err.message : 'Try again');
-          }
+          try { await deleteWord(item.id); onDeleted(item.id); }
+          catch (err) { Alert.alert('Delete failed', err instanceof Error ? err.message : 'Try again'); }
         },
       },
     ]);
   };
 
   return (
-    <TouchableOpacity style={styles.card} onPress={() => setExpanded(!expanded)}>
+    <Pressable
+      style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.surfaceContainerHigh, ...makeShadow(colors, 'card') }]}
+      onPress={() => setExpanded(!expanded)}
+    >
       <View style={styles.row}>
-        <View style={{ flex: 1 }}>
-          <View style={styles.header}>
-            <Text style={styles.zh}>{item.wordZh}</Text>
+        <View style={[styles.charBox, { backgroundColor: colors.surfaceContainer, borderColor: colors.outlineVariant }]}>
+          <View style={[styles.gridV, { backgroundColor: colors.outlineVariant }]} />
+          <View style={[styles.gridH, { backgroundColor: colors.outlineVariant }]} />
+          <Text style={[styles.charZh, { color: colors.primary }]} numberOfLines={1} adjustsFontSizeToFit>{item.wordZh}</Text>
+        </View>
+
+        <View style={{ flex: 1, justifyContent: 'center' }}>
+          <Text style={[typography.pinyin, { color: colors.onSurfaceVariant }]}>{item.wordPinyin}</Text>
+          <Text style={{ fontFamily: fonts.headlineSemi, fontSize: 16, color: colors.onSurface, marginTop: 2 }}>{item.wordEn}</Text>
+          <View style={styles.badges}>
             {item.hskLevel != null && (
-              <View style={styles.hskBadge}>
-                <Text style={styles.hskText}>HSK {item.hskLevel}</Text>
+              <View style={[styles.chip, { backgroundColor: colors.primarySoft }]}>
+                <Text style={[typography.label, { color: colors.primary }]}>HSK {item.hskLevel}</Text>
               </View>
             )}
-            {item.isLearned && <Text style={styles.learnedBadge}>✓ learned</Text>}
+            {item.isLearned && (
+              <View style={[styles.chip, { backgroundColor: colors.primarySoft, flexDirection: 'row', alignItems: 'center', gap: 3 }]}>
+                <Icon name="check-circle" size={12} color={colors.primary} />
+                <Text style={[typography.label, { color: colors.primary }]}>Learned</Text>
+              </View>
+            )}
           </View>
-          <Text style={styles.pinyin}>{item.wordPinyin}</Text>
-          <Text style={styles.en}>{item.wordEn}</Text>
         </View>
-        <TouchableOpacity style={styles.speakButton} onPress={() => speakChinese(item.wordZh)}>
-          <Text style={{ fontSize: 20 }}>🔊</Text>
-        </TouchableOpacity>
+
+        <Pressable style={[styles.iconBtn, { backgroundColor: colors.surfaceContainer }]} onPress={() => speakChinese(item.wordZh)}>
+          <Icon name="volume-up" size={20} color={colors.primary} />
+        </Pressable>
       </View>
 
       {expanded && (
-        <View style={styles.actions}>
+        <View style={[styles.actions, { borderTopColor: colors.surfaceContainerHigh }]}>
           {item.exampleSentence ? (
-            <Text style={styles.example}>{item.exampleSentence}</Text>
+            <Text style={[typography.body, { color: colors.onSurfaceVariant, fontStyle: 'italic', marginBottom: spacing.sm }]}>{item.exampleSentence}</Text>
           ) : null}
           <View style={styles.actionRow}>
-            <TouchableOpacity
-              style={[styles.actionButton, item.isLearned && styles.actionButtonActive]}
+            <Pressable
+              style={[styles.actionBtn, { borderColor: item.isLearned ? colors.primary : colors.outlineVariant }]}
               onPress={toggleLearned}
               disabled={busy}
             >
-              <Text style={styles.actionText}>
-                {item.isLearned ? 'Mark as not learned' : 'Mark as learned'}
+              <Text style={[typography.label, { fontSize: 13, color: colors.onSurface }]}>
+                {item.isLearned ? 'Mark unlearned' : 'Mark learned'}
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.deleteButton} onPress={confirmDelete}>
-              <Text style={styles.deleteText}>Delete</Text>
-            </TouchableOpacity>
+            </Pressable>
+            <Pressable style={[styles.actionBtn, { borderColor: colors.error }]} onPress={confirmDelete}>
+              <Text style={[typography.label, { fontSize: 13, color: colors.error }]}>Delete</Text>
+            </Pressable>
           </View>
         </View>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: '#1e293b', borderRadius: 12, padding: 14, marginBottom: 10,
-  },
-  row: { flexDirection: 'row', alignItems: 'center' },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  zh: { color: '#fff', fontSize: 22, fontWeight: 'bold' },
-  hskBadge: { backgroundColor: '#9333ea33', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
-  hskText: { color: '#c4b5fd', fontSize: 11, fontWeight: '600' },
-  learnedBadge: { color: '#4ade80', fontSize: 12 },
-  pinyin: { color: '#a855f7', fontSize: 14, marginTop: 2 },
-  en: { color: '#94a3b8', fontSize: 14, marginTop: 2 },
-  speakButton: { padding: 8 },
-  actions: { marginTop: 12, borderTopWidth: 1, borderTopColor: '#334155', paddingTop: 12 },
-  example: { color: '#cbd5e1', fontSize: 14, marginBottom: 10, fontStyle: 'italic' },
-  actionRow: { flexDirection: 'row', gap: 10 },
-  actionButton: {
-    flex: 1, backgroundColor: '#0f172a', borderRadius: 8, padding: 10,
-    borderWidth: 1, borderColor: '#475569',
-  },
-  actionButtonActive: { borderColor: '#4ade80' },
-  actionText: { color: '#e2e8f0', textAlign: 'center', fontSize: 13 },
-  deleteButton: {
-    backgroundColor: '#0f172a', borderRadius: 8, padding: 10,
-    borderWidth: 1, borderColor: '#ef4444', paddingHorizontal: 16,
-  },
-  deleteText: { color: '#ef4444', fontSize: 13 },
+  card: { borderWidth: 1, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.sm },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  charBox: { width: 64, height: 64, borderRadius: radius.md, borderWidth: 1, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  gridV: { position: 'absolute', width: 1, height: '100%', opacity: 0.4 },
+  gridH: { position: 'absolute', height: 1, width: '100%', opacity: 0.4 },
+  charZh: { fontFamily: fonts.hanzi, fontSize: 30, paddingHorizontal: 4 },
+  badges: { flexDirection: 'row', gap: 6, marginTop: spacing.xs },
+  chip: { borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 2 },
+  iconBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  actions: { marginTop: spacing.md, borderTopWidth: 1, paddingTop: spacing.md },
+  actionRow: { flexDirection: 'row', gap: spacing.sm },
+  actionBtn: { flex: 1, borderWidth: 1.5, borderRadius: radius.md, paddingVertical: 10, alignItems: 'center' },
 });

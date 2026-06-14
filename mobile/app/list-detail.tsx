@@ -3,9 +3,12 @@ import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-nativ
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { fetchVocabulary, VocabularyItem } from '../src/lib/vocabulary-service';
 import { VocabularyWordCard } from '../src/components/vocabulary-word-card';
+import { useTheme } from '../src/theme/theme-context';
+import { spacing, typography } from '../src/theme/theme';
 
 export default function ListDetailScreen() {
   const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
+  const { colors } = useTheme();
   const [items, setItems] = useState<VocabularyItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,19 +27,19 @@ export default function ListDetailScreen() {
   useEffect(() => { load(); }, [load]);
 
   return (
-    <View style={styles.container}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Stack.Screen options={{ title: name ?? 'List' }} />
       {loading ? (
-        <ActivityIndicator size="large" color="#a855f7" style={{ marginTop: 48 }} />
+        <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 48 }} />
       ) : error ? (
-        <Text style={styles.error}>{error}</Text>
+        <Text style={[typography.body, { color: colors.error, textAlign: 'center', marginTop: 48 }]}>{error}</Text>
       ) : (
         <FlatList
           data={items}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ padding: 16 }}
+          contentContainerStyle={{ padding: spacing.containerMargin }}
           ListEmptyComponent={
-            <Text style={styles.empty}>This list has no words yet.</Text>
+            <Text style={[typography.body, { color: colors.onSurfaceVariant, textAlign: 'center', marginTop: 64 }]}>This list has no words yet.</Text>
           }
           renderItem={({ item }) => (
             <VocabularyWordCard
@@ -52,9 +55,3 @@ export default function ListDetailScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a' },
-  error: { color: '#f87171', textAlign: 'center', marginTop: 48 },
-  empty: { color: '#94a3b8', textAlign: 'center', marginTop: 64 },
-});

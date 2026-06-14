@@ -1,14 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  View, Text, TextInput, FlatList, StyleSheet, ActivityIndicator, RefreshControl,
-} from 'react-native';
+import { View, Text, TextInput, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/lib/auth-context';
 import { LoginRequiredPrompt } from '../../src/components/login-required-prompt';
 import { VocabularyWordCard } from '../../src/components/vocabulary-word-card';
 import { fetchVocabulary, VocabularyItem } from '../../src/lib/vocabulary-service';
+import { useTheme } from '../../src/theme/theme-context';
+import { spacing, radius, typography, fonts } from '../../src/theme/theme';
+import { Eyebrow, Icon } from '../../src/theme/ui-primitives';
 
 export default function VocabularyScreen() {
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const [items, setItems] = useState<VocabularyItem[]>([]);
   const [total, setTotal] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -59,27 +63,34 @@ export default function VocabularyScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <TextInput
-        style={styles.search}
-        placeholder="Search 汉字, pinyin, or English…"
-        placeholderTextColor="#64748b"
-        value={search}
-        onChangeText={setSearch}
-        autoCapitalize="none"
-      />
+    <View style={{ flex: 1, backgroundColor: colors.background, paddingHorizontal: spacing.containerMargin, paddingTop: insets.top + spacing.sm }}>
+      <Text style={[typography.headline, { color: colors.onSurface, marginBottom: spacing.md }]}>Library</Text>
+
+      <View style={[searchStyles.bar, { backgroundColor: colors.surface, borderColor: colors.outlineVariant }]}>
+        <Icon name="search" size={20} color={colors.outline} />
+        <TextInput
+          style={{ flex: 1, color: colors.onSurface, fontFamily: fonts.body, fontSize: 15 }}
+          placeholder="Search 汉字, pinyin, or English…"
+          placeholderTextColor={colors.outline}
+          value={search}
+          onChangeText={setSearch}
+          autoCapitalize="none"
+        />
+      </View>
       {!loading && !error && (
-        <Text style={styles.count}>{total} {total === 1 ? 'word' : 'words'}</Text>
+        <Eyebrow style={{ marginTop: spacing.md, marginBottom: spacing.sm }}>
+          {total} {total === 1 ? 'word' : 'words'}
+        </Eyebrow>
       )}
 
       {loading ? (
-        <ActivityIndicator size="large" color="#a855f7" style={{ marginTop: 48 }} />
+        <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 48 }} />
       ) : error ? (
-        <Text style={styles.error}>{error}</Text>
+        <Text style={[typography.body, { color: colors.error, textAlign: 'center', marginTop: 48 }]}>{error}</Text>
       ) : items.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyEmoji}>📚</Text>
-          <Text style={styles.emptyText}>
+        <View style={{ alignItems: 'center', marginTop: 64 }}>
+          <Icon name="menu-book" size={44} color={colors.outline} />
+          <Text style={[typography.body, { color: colors.onSurfaceVariant, textAlign: 'center', marginTop: spacing.md }]}>
             {search ? 'No words match your search.' : 'No words yet.\nCapture a photo to start collecting vocabulary!'}
           </Text>
         </View>
@@ -90,41 +101,24 @@ export default function VocabularyScreen() {
           renderItem={({ item }) => (
             <VocabularyWordCard
               item={item}
-              onDeleted={(id) => {
-                setItems((prev) => prev.filter((w) => w.id !== id));
-                setTotal((t) => t - 1);
-              }}
+              onDeleted={(id) => { setItems((prev) => prev.filter((w) => w.id !== id)); setTotal((t) => t - 1); }}
               onLearnedChanged={(id, isLearned) =>
-                setItems((prev) =>
-                  prev.map((w) => (w.id === id ? { ...w, isLearned } : w))
-                )
+                setItems((prev) => prev.map((w) => (w.id === id ? { ...w, isLearned } : w)))
               }
             />
           )}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#a855f7" />
-          }
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
           onEndReached={onEndReached}
           onEndReachedThreshold={0.4}
-          ListFooterComponent={
-            loadingMore ? <ActivityIndicator color="#a855f7" style={{ marginVertical: 16 }} /> : null
-          }
-          contentContainerStyle={{ paddingBottom: 24 }}
+          ListFooterComponent={loadingMore ? <ActivityIndicator color={colors.primary} style={{ marginVertical: 16 }} /> : null}
+          contentContainerStyle={{ paddingBottom: 120 }}
         />
       )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a', padding: 16 },
-  search: {
-    backgroundColor: '#1e293b', borderRadius: 12, padding: 14, color: '#fff',
-    borderWidth: 1, borderColor: '#334155', marginBottom: 8,
-  },
-  count: { color: '#64748b', fontSize: 13, marginBottom: 12 },
-  error: { color: '#f87171', textAlign: 'center', marginTop: 48 },
-  empty: { alignItems: 'center', marginTop: 64 },
-  emptyEmoji: { fontSize: 40, marginBottom: 12 },
-  emptyText: { color: '#94a3b8', textAlign: 'center', lineHeight: 22 },
+import { StyleSheet } from 'react-native';
+const searchStyles = StyleSheet.create({
+  bar: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderRadius: radius.md, borderWidth: 1, paddingHorizontal: spacing.md, paddingVertical: 12 },
 });
