@@ -27,7 +27,9 @@
       "permissions": [
         "CAMERA",
         "READ_MEDIA_IMAGES",
-        "POST_NOTIFICATIONS"
+        "POST_NOTIFICATIONS",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
       ]
     },
     "web": {
@@ -40,6 +42,13 @@
       "expo-audio",
       "expo-notifications"
     ],
-    "scheme": "aiimagedict"
+    "scheme": "aiimagedict",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "47b50771-6df8-431d-944a-cd2aa80659af"
+      }
+    },
+    "owner": "lqtrung.dev"
   }
 }
