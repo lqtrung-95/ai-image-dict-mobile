@@ -1,19 +1,36 @@
-import { useCallback, useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { View, Text, Pressable, StyleSheet, Alert, Animated, ActivityIndicator } from 'react-native';
 import { fetchDailyGoals, setDailyGoal, DailyGoalsResponse } from '../lib/stats-service';
 import { TextInputModal } from './text-input-modal';
 import { useTheme } from '../theme/theme-context';
 import { spacing, radius, typography } from '../theme/theme';
 import { Icon } from '../theme/ui-primitives';
 
+function SkeletonBar({ width }: { width: number | string }) {
+  const { colors } = useTheme();
+  const anim = useRef(new Animated.Value(0.4)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(anim, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(anim, { toValue: 0.4, duration: 700, useNativeDriver: true }),
+      ])
+    ).start();
+    return () => anim.stopAnimation();
+  }, [anim]);
+  return <Animated.View style={{ width, height: 12, borderRadius: 6, backgroundColor: colors.surfaceContainer, opacity: anim }} />;
+}
+
 // Daily review goal with progress bar. Tap "edit" to change the target.
 export function DailyGoalCard() {
   const { colors } = useTheme();
   const [data, setData] = useState<DailyGoalsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
 
   const load = useCallback(() => {
-    fetchDailyGoals().then(setData).catch(() => {});
+    fetchDailyGoals().then(setData).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -30,11 +47,14 @@ export function DailyGoalCard() {
       Alert.alert('Invalid goal', 'Pick a number between 1 and 500.');
       return;
     }
+    setSaving(true);
     try {
       await setDailyGoal('reviews_completed', newTarget);
       load();
     } catch {
       Alert.alert('Save failed', 'Try again');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -45,12 +65,23 @@ export function DailyGoalCard() {
           <Icon name="track-changes" size={18} color={colors.primary} />
           <Text style={[typography.heading, { fontSize: 15, color: colors.onSurface }]}>Daily Goal</Text>
         </View>
-        <Pressable onPress={() => setEditorOpen(true)}>
-          <Text style={[typography.label, { fontSize: 13, color: colors.primary }]}>{reviewGoal ? 'Edit' : 'Set goal'}</Text>
-        </Pressable>
+        {saving ? (
+          <ActivityIndicator size="small" color={colors.primary} />
+        ) : (
+          <Pressable onPress={() => setEditorOpen(true)} disabled={loading}>
+            <Text style={[typography.label, { fontSize: 13, color: colors.primary }]}>{reviewGoal ? 'Edit' : 'Set goal'}</Text>
+          </Pressable>
+        )}
       </View>
 
-      {reviewGoal ? (
+      {loading ? (
+        <View style={{ gap: 8 }}>
+          <SkeletonBar width="60%" />
+          <View style={[styles.track, { backgroundColor: colors.background }]}>
+            <Animated.View style={[styles.fill, { width: '40%', backgroundColor: colors.surfaceContainer }]} />
+          </View>
+        </View>
+      ) : reviewGoal ? (
         <View>
           <Text style={[typography.pinyin, { color: colors.onSurfaceVariant, marginBottom: spacing.xs }]}>
             {done} / {target} reviews today {pct >= 100 ? '· done!' : ''}

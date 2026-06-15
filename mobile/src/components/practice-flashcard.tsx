@@ -1,5 +1,6 @@
 import { Text, Pressable, View, StyleSheet } from 'react-native';
 import { speakChinese } from '../lib/tts-speech-service';
+import { tapLight, tapSelection } from '../lib/haptics-service';
 import type { DueWord, SrsRating } from '../lib/practice-service';
 import { useTheme } from '../theme/theme-context';
 import { spacing, radius, typography, fonts, makeShadow } from '../theme/theme';
@@ -26,7 +27,7 @@ export function PracticeFlashcard({ word, flipped, onFlip, onRate }: Props) {
     <View style={{ flex: 1, justifyContent: 'center' }}>
       <Pressable
         style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.outlineVariant, ...makeShadow(colors, 'card') }]}
-        onPress={onFlip}
+        onPress={() => { tapLight(); onFlip(); }}
       >
         <Text style={[styles.zh, { color: colors.onSurface }]}>{word.wordZh}</Text>
         <Pressable onPress={() => speakChinese(word.wordZh)} style={{ marginTop: spacing.md, padding: spacing.sm }}>
@@ -54,7 +55,7 @@ export function PracticeFlashcard({ word, flipped, onFlip, onRate }: Props) {
             <Pressable
               key={rating}
               style={({ pressed }) => [styles.ratingBtn, { borderColor: color, backgroundColor: colors.surface }, pressed && { transform: [{ scale: 0.96 }] }]}
-              onPress={() => onRate(rating)}
+              onPress={() => { tapSelection(); onRate(rating); }}
             >
               <Text style={[typography.label, { fontSize: 14, color }]}>{label}</Text>
             </Pressable>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TextInput, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TextInput, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { speakChinese } from '../src/lib/tts-speech-service';
 import { ListPickerRow } from '../src/components/list-picker-row';
@@ -9,6 +9,8 @@ import {
 import { useTheme } from '../src/theme/theme-context';
 import { spacing, radius, typography, fonts } from '../src/theme/theme';
 import { Icon } from '../src/theme/ui-primitives';
+import { AppHeader } from '../src/components/app-header';
+import { showError, showSuccess } from '../src/lib/toast';
 
 type Phase = 'input' | 'extracting' | 'preview' | 'saving';
 
@@ -31,7 +33,7 @@ export default function ImportVocabularyScreen() {
       setSelected(new Set(result.preview.map((_, i) => i)));
       setPhase('preview');
     } catch (err) {
-      Alert.alert('Extraction failed', err instanceof Error ? err.message : 'Try again');
+      showError('Extraction failed', err instanceof Error ? err.message : 'Try again');
       setPhase('input');
     }
   };
@@ -50,9 +52,10 @@ export default function ImportVocabularyScreen() {
     try {
       const words: ExtractedWord[] = preview.preview.filter((_, i) => selected.has(i));
       const { saved } = await saveImportedWords(preview.importId, words, listId ?? undefined);
-      Alert.alert('Imported!', `${saved} words added to your vocabulary.`, [{ text: 'OK', onPress: () => router.back() }]);
+      showSuccess('Imported!', `${saved} words added to your vocabulary.`);
+      router.back();
     } catch (err) {
-      Alert.alert('Save failed', err instanceof Error ? err.message : 'Try again');
+      showError('Save failed', err instanceof Error ? err.message : 'Try again');
       setPhase('preview');
     }
   };
@@ -62,18 +65,23 @@ export default function ImportVocabularyScreen() {
 
   if (phase === 'extracting' || phase === 'saving') {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={[typography.body, { color: colors.onSurfaceVariant, marginTop: spacing.md }]}>
-          {phase === 'extracting' ? 'AI is extracting vocabulary…' : 'Saving words…'}
-        </Text>
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <AppHeader title="Import Words" showBack />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[typography.body, { color: colors.onSurfaceVariant, marginTop: spacing.md }]}>
+            {phase === 'extracting' ? 'AI is extracting vocabulary…' : 'Saving words…'}
+          </Text>
+        </View>
       </View>
     );
   }
 
   if (phase === 'preview' && preview) {
     return (
-      <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.containerMargin, paddingBottom: 48 }}>
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <AppHeader title="Import Words" showBack />
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing.containerMargin, paddingBottom: 48 }}>
         <Text style={[typography.heading, { color: colors.onSurface }]}>{preview.sourceTitle}</Text>
         <Text style={[typography.pinyin, { color: colors.onSurfaceVariant, marginBottom: spacing.md }]}>
           {preview.preview.length} words found · {selected.size} selected (tap to toggle)
@@ -108,12 +116,15 @@ export default function ImportVocabularyScreen() {
         <Pressable style={{ padding: spacing.md, marginTop: 4 }} onPress={() => setPhase('input')}>
           <Text style={[typography.label, { fontSize: 14, color: colors.onSurfaceVariant, textAlign: 'center' }]}>Start over</Text>
         </Pressable>
-      </ScrollView>
+        </ScrollView>
+      </View>
     );
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.containerMargin }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <AppHeader title="Import Words" showBack />
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing.containerMargin }}>
       <Text style={[typography.body, { color: colors.onSurfaceVariant, marginBottom: spacing.md }]}>
         Import Chinese vocabulary from a web article or pasted text. AI extracts the words for you.
       </Text>
@@ -147,7 +158,8 @@ export default function ImportVocabularyScreen() {
       </Pressable>
 
       <Text style={[typography.label, { fontSize: 12, color: colors.outline, textAlign: 'center', marginTop: spacing.md }]}>Limit: 10 imports per hour</Text>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 

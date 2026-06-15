@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform, Alert, View } from 'react-native';
+import { Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform, View } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useAuth } from '../../src/lib/auth-context';
+import { showError } from '../../src/lib/toast';
 import { useTheme } from '../../src/theme/theme-context';
 import { spacing, radius, typography, fonts } from '../../src/theme/theme';
 import { Icon } from '../../src/theme/ui-primitives';
@@ -26,7 +27,7 @@ export default function LoginScreen() {
       await login(email.trim(), password);
       dismissAfterLogin();
     } catch (err) {
-      Alert.alert('Login failed', err instanceof Error ? err.message : 'Please try again');
+      showError('Login failed', err instanceof Error ? err.message : 'Please try again');
     } finally {
       setSubmitting(false);
     }
@@ -38,7 +39,7 @@ export default function LoginScreen() {
       await loginWithGoogle();
       dismissAfterLogin();
     } catch (err) {
-      Alert.alert('Google sign-in failed', err instanceof Error ? err.message : 'Please try again');
+      showError('Google sign-in failed', err instanceof Error ? err.message : 'Please try again');
     } finally {
       setSubmitting(false);
     }

@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert, Image } from 'react-native';
+import { useState, useEffect, useRef } from 'react';
+import { View, Text, Pressable, StyleSheet, Alert, Image, Animated, Easing } from 'react-native';
+import { showError } from '../../src/lib/toast';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
@@ -9,6 +10,74 @@ import { setLatestAnalysisResult } from '../../src/lib/analysis-result-store';
 import { Screen, Eyebrow } from '../../src/theme/ui-primitives';
 import { useTheme } from '../../src/theme/theme-context';
 import { spacing, radius, typography, fonts, makeShadow } from '../../src/theme/theme';
+
+function AnalyzingScreen({ uri }: { uri: string }) {
+  const { colors } = useTheme();
+  const scanY = useRef(new Animated.Value(0)).current;
+  const pulse = useRef(new Animated.Value(0.6)).current;
+
+  useEffect(() => {
+    // Scan line sweeping up and down continuously
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(scanY, { toValue: 1, duration: 1800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(scanY, { toValue: 0, duration: 1800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ])
+    ).start();
+    // Badge pulse
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0.6, duration: 600, useNativeDriver: true }),
+      ])
+    ).start();
+  }, [scanY, pulse]);
+
+  const CARD = 300;
+  const scanTranslate = scanY.interpolate({ inputRange: [0, 1], outputRange: [0, CARD - 2] });
+
+  const Corner = ({ style }: { style: object }) => (
+    <View style={[styles.corner, style, { borderColor: colors.primary }]} />
+  );
+
+  return (
+    <View style={[styles.analyzingBg, { backgroundColor: colors.background }]}>
+      {/* Photo card with viewfinder overlay */}
+      <View style={[styles.photoCard, { width: CARD, height: CARD }]}>
+        <Image source={{ uri }} style={{ width: CARD, height: CARD, borderRadius: radius.lg }} resizeMode="cover" />
+
+        {/* Dark vignette overlay */}
+        <View style={[StyleSheet.absoluteFill, styles.vignette, { borderRadius: radius.lg }]} />
+
+        {/* Corner brackets */}
+        <Corner style={{ top: 12, left: 12, borderRightWidth: 0, borderBottomWidth: 0 }} />
+        <Corner style={{ top: 12, right: 12, borderLeftWidth: 0, borderBottomWidth: 0 }} />
+        <Corner style={{ bottom: 12, left: 12, borderRightWidth: 0, borderTopWidth: 0 }} />
+        <Corner style={{ bottom: 12, right: 12, borderLeftWidth: 0, borderTopWidth: 0 }} />
+
+        {/* Scanning line */}
+        <Animated.View
+          style={[
+            styles.scanLine,
+            { backgroundColor: colors.primary, transform: [{ translateY: scanTranslate }] },
+          ]}
+        />
+      </View>
+
+      {/* Live AI badge */}
+      <Animated.View style={[styles.liveBadge, { backgroundColor: colors.primarySoft, opacity: pulse }]}>
+        <View style={[styles.liveDot, { backgroundColor: colors.primary }]} />
+        <Text style={[typography.label, { fontSize: 11, color: colors.primary, letterSpacing: 1 }]}>LIVE AI</Text>
+      </Animated.View>
+
+      {/* Text */}
+      <Text style={[styles.analyzingTitle, { color: colors.onSurface }]}>Analyzing your photo…</Text>
+      <Text style={[typography.body, { color: colors.onSurfaceVariant, textAlign: 'center', paddingHorizontal: spacing.xl }]}>
+        Detecting objects and translating to Chinese
+      </Text>
+    </View>
+  );
+}
 
 export default function CaptureScreen() {
   const { user } = useAuth();
@@ -50,7 +119,7 @@ export default function CaptureScreen() {
       } else if (message === 'DAILY_LIMIT_REACHED') {
         Alert.alert('Daily limit reached', "You've used all 6 free analyses today. Come back tomorrow!");
       } else {
-        Alert.alert('Analysis failed', message);
+        showError('Analysis failed', message);
       }
     } finally {
       setAnalyzing(false);
@@ -58,15 +127,8 @@ export default function CaptureScreen() {
     }
   };
 
-  if (analyzing) {
-    return (
-      <Screen contentStyle={{ justifyContent: 'center', alignItems: 'center' }}>
-        {previewUri && <Image source={{ uri: previewUri }} style={styles.preview} />}
-        <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: spacing.lg }} />
-        <Text style={[typography.heading, { color: colors.onSurface, marginTop: spacing.md }]}>Analyzing your photo…</Text>
-        <Text style={[typography.body, { color: colors.onSurfaceVariant, marginTop: 4 }]}>Detecting objects and translating to Chinese</Text>
-      </Screen>
-    );
+  if (analyzing && previewUri) {
+    return <AnalyzingScreen uri={previewUri} />;
   }
 
   return (
@@ -105,6 +167,19 @@ export default function CaptureScreen() {
 }
 
 const styles = StyleSheet.create({
+  // Analyzing screen
+  analyzingBg: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.lg },
+  photoCard: { borderRadius: radius.lg, overflow: 'hidden', position: 'relative' },
+  vignette: { backgroundColor: 'rgba(0,0,0,0.25)' },
+  corner: { position: 'absolute', width: 20, height: 20, borderWidth: 2.5 },
+  scanLine: { position: 'absolute', left: 0, right: 0, height: 2, opacity: 0.85 },
+  liveBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 12, paddingVertical: 5, borderRadius: radius.pill,
+  },
+  liveDot: { width: 6, height: 6, borderRadius: 3 },
+  analyzingTitle: { fontFamily: fonts.headlineSemi, fontSize: 20, textAlign: 'center' },
+  // Capture screen
   heroIcon: { width: 96, height: 96, borderRadius: 48, alignItems: 'center', justifyContent: 'center' },
   preview: { width: 200, height: 200, borderRadius: radius.lg },
   primaryBtn: {

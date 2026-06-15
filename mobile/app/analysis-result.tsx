@@ -1,12 +1,14 @@
-import { useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, Image, Alert } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View, Text, ScrollView, Pressable, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { speakChinese } from '../src/lib/tts-speech-service';
 import { useAuth } from '../src/lib/auth-context';
 import { getLatestAnalysisResult } from '../src/lib/analysis-result-store';
 import { saveWordToVocabulary, DetectedWord } from '../src/lib/analysis-service';
-import { ListPickerRow } from '../src/components/list-picker-row';
+import { fetchLists, VocabularyList } from '../src/lib/library-service';
+import { SaveToListSheet } from '../src/components/save-to-list-sheet';
+import { showError } from '../src/lib/toast';
 import { useTheme } from '../src/theme/theme-context';
 import { spacing, radius, typography, fonts, makeShadow } from '../src/theme/theme';
 import { Icon, Eyebrow } from '../src/theme/ui-primitives';
@@ -15,22 +17,16 @@ const CATEGORY_LABELS: Record<string, string> = {
   object: 'Objects', color: 'Colors', action: 'Actions',
 };
 
-function WordCard({ word, canSave, listId }: { word: DetectedWord; canSave: boolean; listId: string | null }) {
+function WordCard({
+  word, canSave, saved, saving, onSavePress,
+}: {
+  word: DetectedWord;
+  canSave: boolean;
+  saved: boolean;
+  saving: boolean;
+  onSavePress: (word: DetectedWord) => void;
+}) {
   const { colors } = useTheme();
-  const [saved, setSaved] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await saveWordToVocabulary(word, listId ?? undefined);
-      setSaved(true);
-    } catch (err) {
-      Alert.alert('Save failed', err instanceof Error ? err.message : 'Try again');
-    } finally {
-      setSaving(false);
-    }
-  };
 
   return (
     <View style={[styles.wordCard, { backgroundColor: colors.surface, borderColor: colors.surfaceContainerHigh, ...makeShadow(colors, 'card') }]}>
@@ -63,10 +59,12 @@ function WordCard({ word, canSave, listId }: { word: DetectedWord; canSave: bool
         {canSave && (
           <Pressable
             style={[styles.iconBtn, { backgroundColor: saved ? colors.primaryContainer : colors.surfaceContainer }]}
-            onPress={handleSave}
+            onPress={() => onSavePress(word)}
             disabled={saved || saving}
           >
-            <Icon name={saved ? 'bookmark-added' : 'bookmark-add'} size={20} color={saved ? colors.onPrimaryContainer : colors.primary} />
+            {saving
+              ? <ActivityIndicator size="small" color={colors.primary} />
+              : <Icon name={saved ? 'bookmark-added' : 'bookmark-add'} size={20} color={saved ? colors.onPrimaryContainer : colors.primary} />}
           </Pressable>
         )}
       </View>
@@ -80,7 +78,31 @@ export default function AnalysisResultScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const result = getLatestAnalysisResult();
-  const [targetListId, setTargetListId] = useState<string | null>(null);
+  const [lists, setLists] = useState<VocabularyList[]>([]);
+  const [pickerWord, setPickerWord] = useState<DetectedWord | null>(null);
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [savingId, setSavingId] = useState<string | null>(null);
+
+  // Preload the user's lists once so the save sheet opens instantly.
+  useEffect(() => {
+    if (user) fetchLists().then(setLists).catch(() => {});
+  }, [user]);
+
+  // User picked a destination in the sheet — persist the pending word there.
+  const handleChooseList = async (listId: string | null) => {
+    const word = pickerWord;
+    setPickerWord(null);
+    if (!word) return;
+    setSavingId(word.id);
+    try {
+      await saveWordToVocabulary(word, listId ?? undefined);
+      setSavedIds((prev) => new Set(prev).add(word.id));
+    } catch (err) {
+      showError('Save failed', err instanceof Error ? err.message : 'Try again');
+    } finally {
+      setSavingId(null);
+    }
+  };
 
   if (!result) {
     return (
@@ -98,7 +120,12 @@ export default function AnalysisResultScreen() {
     .filter((g) => g.words.length > 0);
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ paddingBottom: 48 }} showsVerticalScrollIndicator={false}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={{ paddingBottom: 48 }}
+      showsVerticalScrollIndicator={false}
+    >
       {/* Hero image with overlay pills */}
       <View style={styles.hero}>
         <Image source={{ uri: result.imageUri }} style={styles.heroImage} />
@@ -144,24 +171,35 @@ export default function AnalysisResultScreen() {
           </Pressable>
         )}
 
-        {user && (
-          <View style={{ marginBottom: spacing.md }}>
-            <ListPickerRow selectedListId={targetListId} onSelect={setTargetListId} />
-          </View>
-        )}
-
         {byCategory.map(({ cat, words }) => (
           <View key={cat} style={{ marginBottom: spacing.lg }}>
             <Eyebrow style={{ marginBottom: spacing.sm }}>{CATEGORY_LABELS[cat]}</Eyebrow>
             <View style={{ gap: spacing.sm }}>
               {words.map((word) => (
-                <WordCard key={word.id} word={word} canSave={!!user} listId={targetListId} />
+                <WordCard
+                  key={word.id}
+                  word={word}
+                  canSave={!!user}
+                  saved={savedIds.has(word.id)}
+                  saving={savingId === word.id}
+                  onSavePress={setPickerWord}
+                />
               ))}
             </View>
           </View>
         ))}
       </View>
     </ScrollView>
+
+    <SaveToListSheet
+      visible={pickerWord !== null}
+      wordZh={pickerWord?.zh}
+      lists={lists}
+      onChoose={handleChooseList}
+      onCancel={() => setPickerWord(null)}
+      onListCreated={(list) => setLists((prev) => [list, ...prev])}
+    />
+    </View>
   );
 }
 

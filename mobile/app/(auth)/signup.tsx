@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useAuth } from '../../src/lib/auth-context';
+import { showError } from '../../src/lib/toast';
 import { useTheme } from '../../src/theme/theme-context';
 import { spacing, radius, typography, fonts } from '../../src/theme/theme';
 
@@ -17,7 +18,7 @@ export default function SignupScreen() {
   const handleSignup = async () => {
     if (!email || !password) return;
     if (password.length < 8) {
-      Alert.alert('Weak password', 'Password must be at least 8 characters');
+      showError('Weak password', 'Password must be at least 8 characters');
       return;
     }
     setSubmitting(true);
@@ -34,7 +35,7 @@ export default function SignupScreen() {
         );
       }
     } catch (err) {
-      Alert.alert('Sign up failed', err instanceof Error ? err.message : 'Please try again');
+      showError('Sign up failed', err instanceof Error ? err.message : 'Please try again');
     } finally {
       setSubmitting(false);
     }

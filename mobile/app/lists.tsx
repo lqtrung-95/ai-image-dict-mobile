@@ -2,11 +2,13 @@ import { useCallback, useState } from 'react';
 import {
   View, Text, Pressable, StyleSheet, FlatList, ActivityIndicator, TextInput, Modal, Alert,
 } from 'react-native';
+import { showError } from '../src/lib/toast';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { fetchLists, createList, deleteList, VocabularyList } from '../src/lib/library-service';
 import { useTheme } from '../src/theme/theme-context';
 import { spacing, radius, typography, fonts, makeShadow } from '../src/theme/theme';
 import { Icon } from '../src/theme/ui-primitives';
+import { AppHeader } from '../src/components/app-header';
 
 const COLORS = ['#2d6a4f', '#3b82f6', '#d9a14a', '#ba181b', '#8b7fd9', '#0f766e'];
 
@@ -34,7 +36,7 @@ export default function ListsScreen() {
       setModalOpen(false); setNewName(''); setNewColor(COLORS[0]);
       await load();
     } catch (err) {
-      Alert.alert('Create failed', err instanceof Error ? err.message : 'Try again');
+      showError('Create failed', err instanceof Error ? err.message : 'Try again');
     } finally { setCreating(false); }
   };
 
@@ -45,18 +47,24 @@ export default function ListsScreen() {
         text: 'Delete', style: 'destructive',
         onPress: async () => {
           try { await deleteList(list.id); setLists((prev) => prev.filter((l) => l.id !== list.id)); }
-          catch { Alert.alert('Delete failed', 'Try again'); }
+          catch { showError('Delete failed', 'Try again'); }
         },
       },
     ]);
   };
 
   if (loading) {
-    return <View style={[styles.center, { backgroundColor: colors.background }]}><ActivityIndicator size="large" color={colors.primary} /></View>;
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <AppHeader title="My Lists" showBack />
+        <View style={styles.center}><ActivityIndicator size="large" color={colors.primary} /></View>
+      </View>
+    );
   }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <AppHeader title="My Lists" showBack />
       <FlatList
         data={lists}
         keyExtractor={(l) => l.id}

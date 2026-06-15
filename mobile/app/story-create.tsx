@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TextInput, StyleSheet, FlatList, Image, Pressable, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, StyleSheet, FlatList, Image, Pressable, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { fetchHistory, createStory, HistoryAnalysis } from '../src/lib/library-service';
 import { useTheme } from '../src/theme/theme-context';
 import { spacing, radius, typography, fonts } from '../src/theme/theme';
 import { Icon } from '../src/theme/ui-primitives';
+import { AppHeader } from '../src/components/app-header';
+import { showError } from '../src/lib/toast';
 
 export default function StoryCreateScreen() {
   const router = useRouter();
@@ -17,7 +19,7 @@ export default function StoryCreateScreen() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchHistory().then(setPhotos).catch(() => {}).finally(() => setLoading(false));
+    fetchHistory().then(setPhotos).catch(() => showError('Failed to load photos', 'Try again')).finally(() => setLoading(false));
   }, []);
 
   const toggle = (id: string) => {
@@ -29,27 +31,34 @@ export default function StoryCreateScreen() {
   };
 
   const handleCreate = async () => {
-    if (!title.trim()) { Alert.alert('Title required', 'Please name your story.'); return; }
-    if (selected.size === 0) { Alert.alert('Select photos', 'Pick at least one photo.'); return; }
+    if (!title.trim()) { showError('Title required', 'Please name your story.'); return; }
+    if (selected.size === 0) { showError('Select photos', 'Pick at least one photo.'); return; }
     setSaving(true);
     try {
       await createStory(title.trim(), description.trim(), Array.from(selected));
       router.back();
     } catch (err) {
-      Alert.alert('Create failed', err instanceof Error ? err.message : 'Try again');
+      showError('Create failed', err instanceof Error ? err.message : 'Try again');
       setSaving(false);
     }
   };
 
   if (loading) {
-    return <View style={[styles.center, { backgroundColor: colors.background }]}><ActivityIndicator size="large" color={colors.primary} /></View>;
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <AppHeader title="New Story" showBack />
+        <View style={styles.center}><ActivityIndicator size="large" color={colors.primary} /></View>
+      </View>
+    );
   }
 
   const inputStyle = { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, color: colors.onSurface, borderWidth: 1, borderColor: colors.outlineVariant, marginBottom: spacing.sm, fontFamily: fonts.body };
 
   return (
-    <FlatList
-      style={{ flex: 1, backgroundColor: colors.background }}
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <AppHeader title="New Story" showBack />
+      <FlatList
+      style={{ flex: 1 }}
       data={photos}
       keyExtractor={(p) => p.id}
       numColumns={3}
@@ -83,7 +92,8 @@ export default function StoryCreateScreen() {
           </Pressable>
         ) : null
       }
-    />
+      />
+    </View>
   );
 }
 

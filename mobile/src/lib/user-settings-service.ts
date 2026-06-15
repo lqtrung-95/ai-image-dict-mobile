@@ -1,5 +1,6 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import { supabase } from './supabase-client';
 import { apiFetch } from './api-client';
 
 export interface UserProfile {
@@ -25,6 +26,9 @@ export async function updateDisplayName(displayName: string): Promise<void> {
     const data = await res.json().catch(() => ({}));
     throw new Error(data.error ?? 'Failed to update profile');
   }
+  // Sync to auth user_metadata so AuthContext picks up the change immediately
+  // and the new name persists across app restarts (sessionToUser reads user_metadata).
+  await supabase.auth.updateUser({ data: { display_name: displayName } });
 }
 
 // GDPR-style full data export: downloads JSON and opens the share sheet
@@ -40,6 +44,32 @@ export async function exportAllUserData(): Promise<void> {
   if (await Sharing.isAvailableAsync()) {
     await Sharing.shareAsync(fileUri, { mimeType: 'application/json', dialogTitle: 'Export my data' });
   }
+}
+
+// Upload a local image URI as the user's avatar; returns the new public avatar_url
+export async function uploadAvatar(localUri: string): Promise<string> {
+  const API_URL = process.env.EXPO_PUBLIC_API_URL!;
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+
+  const formData = new FormData();
+  formData.append('avatar', {
+    uri: localUri,
+    name: 'avatar.jpg',
+    type: 'image/jpeg',
+  } as unknown as Blob);
+
+  const res = await fetch(`${API_URL}/api/user/avatar`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+  const data2 = await res.json();
+  if (!res.ok) throw new Error(data2.error ?? 'Avatar upload failed');
+  const avatarUrl = data2.avatarUrl as string;
+  // Sync to user_metadata so AuthContext (and AppHeader) update immediately.
+  await supabase.auth.updateUser({ data: { avatar_url: avatarUrl } });
+  return avatarUrl;
 }
 
 // Permanently deletes the account; the API requires this exact confirmation string

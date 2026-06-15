@@ -1,50 +1,120 @@
-import { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { View, Text, Pressable, StyleSheet, Alert, ScrollView, Image, Animated } from 'react-native';
+import { showError } from '../../src/lib/toast';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { MaterialIcons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../src/lib/auth-context';
 import { exportVocabularyToAnki } from '../../src/lib/anki-export-service';
 import { TextInputModal } from '../../src/components/text-input-modal';
-import { fetchProfile, updateDisplayName, exportAllUserData, deleteAccount } from '../../src/lib/user-settings-service';
-import { Screen, Eyebrow, Icon, AppButton } from '../../src/theme/ui-primitives';
+import { fetchProfile, updateDisplayName, deleteAccount, uploadAvatar } from '../../src/lib/user-settings-service';
+import { fetchStats, UserStats } from '../../src/lib/stats-service';
+import { AppHeader } from '../../src/components/app-header';
+import { AppButton, Icon } from '../../src/theme/ui-primitives';
 import { useTheme, ThemeMode } from '../../src/theme/theme-context';
-import { spacing, radius, typography } from '../../src/theme/theme';
+import { spacing, radius, typography, fonts, makeShadow } from '../../src/theme/theme';
+
+function StatCardSkeleton() {
+  const { colors } = useTheme();
+  const anim = useRef(new Animated.Value(0.4)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(anim, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(anim, { toValue: 0.4, duration: 700, useNativeDriver: true }),
+      ])
+    ).start();
+    return () => anim.stopAnimation();
+  }, [anim]);
+  return (
+    <Animated.View style={[styles.statCard, { backgroundColor: colors.surface, opacity: anim, alignItems: 'center', gap: 6 }]}>
+      <View style={{ width: 48, height: 28, borderRadius: 6, backgroundColor: colors.surfaceContainer }} />
+      <View style={{ width: 80, height: 10, borderRadius: 5, backgroundColor: colors.surfaceContainer }} />
+    </Animated.View>
+  );
+}
+
+// Compute highest HSK level from distribution
+function computeHskBadge(dist: Record<string, number>): string | null {
+  const levels = ['hsk6', 'hsk5', 'hsk4', 'hsk3', 'hsk2', 'hsk1'];
+  for (const l of levels) {
+    if ((dist[l] ?? 0) > 0) return l.replace('hsk', 'HSK ') + ' Learner';
+  }
+  return null;
+}
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
   const { colors, mode, setMode } = useTheme();
   const router = useRouter();
   const [displayName, setDisplayName] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [stats, setStats] = useState<UserStats | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [nameModalOpen, setNameModalOpen] = useState(false);
+  const [themeModalOpen, setThemeModalOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
       setDisplayName(user.displayName);
-      fetchProfile().then((p) => setDisplayName(p.display_name)).catch(() => {});
+      fetchProfile().then((p) => {
+        setDisplayName(p.display_name);
+        setAvatarUrl(p.avatar_url);
+      }).catch(() => {});
     }
   }, [user]);
 
+  useFocusEffect(useCallback(() => {
+    if (user) fetchStats().then(setStats).catch(() => {});
+  }, [user]));
+
   if (!user) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: spacing.xl }}>
-        <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.lg }}>
-          <Icon name="person" size={40} color={colors.primary} />
-        </View>
-        <Text style={[typography.headline, { color: colors.onSurface, marginBottom: spacing.xs }]}>Browsing as guest</Text>
-        <Text style={[typography.body, { color: colors.onSurfaceVariant, textAlign: 'center', marginBottom: spacing.lg }]}>
-          Log in to save vocabulary, track progress, and sync across devices.
-        </Text>
-        <AppButton label="Log in / Sign up" onPress={() => router.push('/(auth)/login')} />
-        <View style={{ marginTop: spacing.xl, width: '100%' }}>
-          <AppearanceToggle mode={mode} setMode={setMode} />
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <AppHeader />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl }}>
+          <View style={[styles.avatarRing, { borderColor: colors.primary, backgroundColor: colors.primarySoft }]}>
+            <Icon name="person" size={48} color={colors.primary} />
+          </View>
+          <Text style={[typography.headline, { color: colors.onSurface, marginTop: spacing.md, marginBottom: spacing.xs }]}>
+            Guest
+          </Text>
+          <Text style={[typography.body, { color: colors.onSurfaceVariant, textAlign: 'center', marginBottom: spacing.xl }]}>
+            Log in to save vocabulary, track progress, and sync across devices.
+          </Text>
+          <AppButton label="Log in / Sign up" onPress={() => router.push('/(auth)/login')} />
         </View>
       </View>
     );
   }
 
+  const initials = displayName
+    ? displayName.slice(0, 2).toUpperCase()
+    : user.email?.slice(0, 2).toUpperCase() ?? '??';
+
   const run = async (key: string, fn: () => Promise<void>, errTitle: string) => {
     setBusy(key);
-    try { await fn(); } catch (err) { Alert.alert(errTitle, err instanceof Error ? err.message : 'Try again'); } finally { setBusy(null); }
+    try { await fn(); } catch (err) { showError(errTitle, err instanceof Error ? err.message : 'Try again'); } finally { setBusy(null); }
+  };
+
+  const pickAvatar = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      showError('Permission required', 'Allow photo library access to change your avatar.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled) return;
+    const uri = result.assets[0].uri;
+    await run('avatar', async () => {
+      const url = await uploadAvatar(uri);
+      setAvatarUrl(url);
+    }, 'Upload failed');
   };
 
   const submitName = async (name: string) => {
@@ -53,11 +123,11 @@ export default function ProfileScreen() {
   };
 
   const confirmDeleteAccount = () => {
-    Alert.alert('Delete account?', 'This permanently deletes your account and ALL data — vocabulary, photos, progress. This cannot be undone.', [
+    Alert.alert('Delete account?', 'This permanently deletes your account and ALL data. Cannot be undone.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete forever', style: 'destructive',
-        onPress: () => Alert.alert('Are you absolutely sure?', 'Last chance to keep your data.', [
+        onPress: () => Alert.alert('Are you absolutely sure?', 'Last chance.', [
           { text: 'Keep my account', style: 'cancel' },
           { text: 'Yes, delete everything', style: 'destructive', onPress: () => run('delete', async () => { await deleteAccount(); await logout(); }, 'Deletion failed') },
         ]),
@@ -65,25 +135,118 @@ export default function ProfileScreen() {
     ]);
   };
 
-  const actionRow = (icon: Parameters<typeof Icon>[0]['name'], label: string, onPress: () => void, danger?: boolean) => (
-    <Pressable
-      style={[styles.row, { backgroundColor: colors.surface, borderColor: danger ? colors.error : colors.outlineVariant }]}
-      onPress={onPress}
-      disabled={busy !== null}
-    >
-      <Icon name={icon} size={20} color={danger ? colors.error : colors.primary} />
-      <Text style={[typography.body, { color: danger ? colors.error : colors.onSurface, flex: 1 }]}>{label}</Text>
-      <Icon name="chevron-right" size={20} color={colors.outline} />
-    </Pressable>
-  );
+  const hskBadge = stats ? computeHskBadge(stats.hskDistribution ?? {}) : null;
+  const themeLabel = mode === 'light' ? 'Light' : mode === 'dark' ? 'Dark' : 'System';
 
   return (
-    <Screen scroll contentStyle={{ paddingBottom: 120 }}>
-      <Pressable style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }} onPress={() => setNameModalOpen(true)}>
-        <Text style={[typography.headline, { color: colors.onSurface }]}>{displayName ?? '—'}</Text>
-        <Icon name="edit" size={18} color={colors.outline} />
-      </Pressable>
-      <Text style={[typography.body, { color: colors.onSurfaceVariant, marginTop: 2 }]}>{user.email}</Text>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <AppHeader />
+      <ScrollView contentContainerStyle={styles.content}>
+
+        {/* Avatar + name + badges */}
+        <View style={styles.heroSection}>
+          <Pressable onPress={pickAvatar} style={styles.avatarWrapper}>
+            <View style={[styles.avatarRing, { borderColor: colors.primary, backgroundColor: colors.primaryContainer }]}>
+              {avatarUrl ? (
+                <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+              ) : (
+                <Text style={[styles.avatarText, { color: colors.onPrimaryContainer }]}>{initials}</Text>
+              )}
+            </View>
+            <View style={[styles.cameraBadge, { backgroundColor: colors.primary }]}>
+              {busy === 'avatar'
+                ? <MaterialIcons name="hourglass-empty" size={12} color={colors.onPrimary} />
+                : <MaterialIcons name="photo-camera" size={12} color={colors.onPrimary} />}
+            </View>
+          </Pressable>
+
+          <Pressable style={styles.nameRow} onPress={() => setNameModalOpen(true)}>
+            <Text style={[styles.nameText, { color: colors.onSurface }]}>{displayName ?? user.email ?? '—'}</Text>
+            <Icon name="edit" size={16} color={colors.outline} />
+          </Pressable>
+
+          <View style={styles.badgeRow}>
+            {hskBadge && (
+              <View style={[styles.badge, { backgroundColor: colors.primaryContainer }]}>
+                <Text style={[typography.label, { fontSize: 11, color: colors.onPrimaryContainer }]}>{hskBadge}</Text>
+              </View>
+            )}
+            {stats && stats.learnedWords >= 5 && (
+              <View style={[styles.badge, { backgroundColor: colors.primaryContainer }]}>
+                <Text style={[typography.label, { fontSize: 11, color: colors.onPrimaryContainer }]}>Calligrapher</Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Stats row — shows skeleton until data arrives */}
+        <View style={styles.statsRow}>
+          {stats ? (
+            <>
+              <View style={[styles.statCard, { backgroundColor: colors.surface, ...makeShadow(colors, 'card') }]}>
+                <Text style={[styles.statValue, { color: colors.onSurface }]}>{stats.learnedWords.toLocaleString()}</Text>
+                <Text style={[typography.label, { fontSize: 11, color: colors.outline }]}>Characters Mastered</Text>
+              </View>
+              <View style={[styles.statCard, { backgroundColor: colors.surface, ...makeShadow(colors, 'card') }]}>
+                <Text style={[styles.statValue, { color: colors.onSurface }]}>{stats.currentStreak}</Text>
+                <Text style={[typography.label, { fontSize: 11, color: colors.outline }]}>Day Streak</Text>
+              </View>
+            </>
+          ) : (
+            <>
+              <StatCardSkeleton />
+              <StatCardSkeleton />
+            </>
+          )}
+        </View>
+
+        {/* Preferences section */}
+        <Text style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}>Preferences</Text>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <SettingRow
+            icon="notifications-none"
+            label="Notification Preferences"
+            onPress={() => router.push('/notification-settings')}
+            colors={colors}
+          />
+          <View style={[styles.divider, { backgroundColor: colors.outlineVariant }]} />
+          <SettingRow
+            icon="brightness-medium"
+            label="App Theme"
+            value={themeLabel}
+            onPress={() => setThemeModalOpen(true)}
+            colors={colors}
+          />
+          <View style={[styles.divider, { backgroundColor: colors.outlineVariant }]} />
+          <SettingRow
+            icon="ios-share"
+            label={busy === 'anki' ? 'Preparing…' : 'Export Data'}
+            onPress={() => run('anki', exportVocabularyToAnki, 'Export failed')}
+            colors={colors}
+          />
+        </View>
+
+        {/* Account section */}
+        <Text style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}>Account</Text>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <SettingRow
+            icon="logout"
+            label="Log Out"
+            onPress={logout}
+            danger
+            colors={colors}
+          />
+          <View style={[styles.divider, { backgroundColor: colors.outlineVariant }]} />
+          <SettingRow
+            icon="delete-outline"
+            label={busy === 'delete' ? 'Deleting…' : 'Delete Account & Data'}
+            onPress={confirmDeleteAccount}
+            danger
+            colors={colors}
+          />
+        </View>
+
+      </ScrollView>
 
       <TextInputModal
         visible={nameModalOpen}
@@ -94,47 +257,121 @@ export default function ProfileScreen() {
         onCancel={() => setNameModalOpen(false)}
       />
 
-      <Eyebrow style={{ marginTop: spacing.xl, marginBottom: spacing.sm }}>Appearance</Eyebrow>
-      <AppearanceToggle mode={mode} setMode={setMode} />
-
-      <Eyebrow style={{ marginTop: spacing.xl, marginBottom: spacing.sm }}>Data</Eyebrow>
-      <View style={{ gap: spacing.sm }}>
-        {actionRow('ios-share', busy === 'anki' ? 'Preparing…' : 'Export vocabulary to Anki', () => run('anki', exportVocabularyToAnki, 'Export failed'))}
-        {actionRow('download', busy === 'export' ? 'Preparing…' : 'Download all my data (JSON)', () => run('export', exportAllUserData, 'Export failed'))}
-      </View>
-
-      <Eyebrow style={{ marginTop: spacing.xl, marginBottom: spacing.sm }}>Account</Eyebrow>
-      <View style={{ gap: spacing.sm }}>
-        {actionRow('logout', 'Log Out', logout)}
-        {actionRow('delete-outline', busy === 'delete' ? 'Deleting…' : 'Delete account & all data', confirmDeleteAccount, true)}
-      </View>
-    </Screen>
+      {themeModalOpen && (
+        <ThemePicker mode={mode} setMode={setMode} onClose={() => setThemeModalOpen(false)} colors={colors} />
+      )}
+    </View>
   );
 }
 
-function AppearanceToggle({ mode, setMode }: { mode: ThemeMode; setMode: (m: ThemeMode) => void }) {
-  const { colors } = useTheme();
+function SettingRow({
+  icon, label, value, onPress, danger, colors,
+}: {
+  icon: Parameters<typeof Icon>[0]['name'];
+  label: string;
+  value?: string;
+  onPress: () => void;
+  danger?: boolean;
+  colors: ReturnType<typeof useTheme>['colors'];
+}) {
+  return (
+    <Pressable style={styles.settingRow} onPress={onPress}>
+      <Icon name={icon} size={20} color={danger ? colors.error : colors.onSurfaceVariant} />
+      <Text style={[typography.body, { flex: 1, color: danger ? colors.error : colors.onSurface }]}>{label}</Text>
+      {value && <Text style={[typography.label, { fontSize: 13, color: colors.outline }]}>{value}</Text>}
+      <MaterialIcons name="chevron-right" size={20} color={danger ? colors.error : colors.outline} />
+    </Pressable>
+  );
+}
+
+function ThemePicker({
+  mode, setMode, onClose, colors,
+}: {
+  mode: ThemeMode;
+  setMode: (m: ThemeMode) => void;
+  onClose: () => void;
+  colors: ReturnType<typeof useTheme>['colors'];
+}) {
   const opts: { value: ThemeMode; label: string }[] = [
     { value: 'system', label: 'System' },
     { value: 'light', label: 'Light' },
     { value: 'dark', label: 'Dark' },
   ];
   return (
-    <View style={[styles.segment, { backgroundColor: colors.surface, borderColor: colors.outlineVariant }]}>
-      {opts.map((o) => {
-        const active = mode === o.value;
-        return (
-          <Pressable key={o.value} style={[styles.segmentItem, active && { backgroundColor: colors.primarySoft }]} onPress={() => setMode(o.value)}>
-            <Text style={[typography.label, { fontSize: 13, color: active ? colors.primary : colors.onSurfaceVariant }]}>{o.label}</Text>
-          </Pressable>
-        );
-      })}
-    </View>
+    <Pressable style={styles.modalBackdrop} onPress={onClose}>
+      <View style={[styles.themeSheet, { backgroundColor: colors.surface }]}>
+        <Text style={[typography.heading, { color: colors.onSurface, marginBottom: spacing.md }]}>App Theme</Text>
+        {opts.map((o) => {
+          const active = mode === o.value;
+          return (
+            <Pressable
+              key={o.value}
+              style={[styles.themeOption, active && { backgroundColor: colors.primarySoft }]}
+              onPress={() => { setMode(o.value); onClose(); }}
+            >
+              <Text style={[typography.body, { color: active ? colors.primary : colors.onSurface }]}>{o.label}</Text>
+              {active && <MaterialIcons name="check" size={18} color={colors.primary} />}
+            </Pressable>
+          );
+        })}
+      </View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderRadius: radius.md, padding: spacing.md, borderWidth: 1 },
-  segment: { flexDirection: 'row', borderRadius: radius.md, borderWidth: 1, padding: 4 },
-  segmentItem: { flex: 1, paddingVertical: 10, borderRadius: radius.sm, alignItems: 'center' },
+  content: { paddingBottom: 120 },
+  heroSection: { alignItems: 'center', paddingTop: spacing.xl, paddingBottom: spacing.lg },
+  avatarWrapper: { position: 'relative', width: 100, height: 100 },
+  avatarRing: {
+    width: 100, height: 100, borderRadius: 50, borderWidth: 3,
+    alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+  },
+  avatarImage: { width: 94, height: 94, borderRadius: 47 },
+  avatarText: { fontFamily: fonts.headlineSemi, fontSize: 32 },
+  cameraBadge: {
+    position: 'absolute', bottom: 2, right: 2,
+    width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center',
+  },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.md },
+  nameText: { fontFamily: fonts.headlineSemi, fontSize: 22 },
+  badgeRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
+  badge: { borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 4 },
+  statsRow: {
+    flexDirection: 'row', gap: spacing.md,
+    marginHorizontal: spacing.containerMargin, marginBottom: spacing.lg,
+  },
+  statCard: {
+    flex: 1, borderRadius: radius.lg, padding: spacing.md, alignItems: 'center', gap: 4,
+  },
+  statValue: { fontFamily: fonts.headlineSemi, fontSize: 28 },
+  sectionLabel: {
+    ...typography.label, fontSize: 12,
+    marginHorizontal: spacing.containerMargin,
+    marginBottom: spacing.xs, marginTop: spacing.md,
+    textTransform: 'uppercase', letterSpacing: 0.5,
+  },
+  section: {
+    marginHorizontal: spacing.containerMargin,
+    borderRadius: radius.lg, overflow: 'hidden',
+    marginBottom: spacing.sm,
+  },
+  settingRow: {
+    flexDirection: 'row', alignItems: 'center',
+    gap: spacing.md, padding: spacing.md,
+  },
+  divider: { height: StyleSheet.hairlineWidth, marginLeft: spacing.md + 20 + spacing.md },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject, backgroundColor: '#00000066',
+    justifyContent: 'flex-end',
+  },
+  themeSheet: {
+    borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,
+    padding: spacing.xl, paddingBottom: spacing.xl + 20,
+  },
+  themeOption: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: spacing.md, paddingHorizontal: spacing.sm,
+    borderRadius: radius.md,
+  },
 });

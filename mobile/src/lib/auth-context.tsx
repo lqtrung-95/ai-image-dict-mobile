@@ -12,6 +12,7 @@ export interface AuthUser {
   id: string;
   email: string;
   displayName: string | null;
+  avatarUrl: string | null;
 }
 
 interface AuthContextValue {
@@ -33,8 +34,8 @@ function sessionToUser(session: Session | null): AuthUser | null {
   return {
     id: session.user.id,
     email: session.user.email ?? '',
-    // Google provides full_name; email signup sets display_name
     displayName: (meta.display_name as string) ?? (meta.full_name as string) ?? null,
+    avatarUrl: (meta.avatar_url as string) ?? null,
   };
 }
 

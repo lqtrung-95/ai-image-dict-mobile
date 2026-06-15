@@ -114,7 +114,9 @@ export async function saveWordToVocabulary(word: DetectedWord, listId?: string):
       listId: listId ?? undefined,
     }),
   });
-  if (!res.ok) {
+  // 409 = the word (or list membership) already exists. Saving is idempotent
+  // from the user's perspective, so treat it as success rather than an error.
+  if (!res.ok && res.status !== 409) {
     const data = await res.json().catch(() => ({}));
     throw new Error(data.error ?? 'Failed to save word');
   }

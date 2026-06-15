@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { fetchVocabulary, VocabularyItem } from '../src/lib/vocabulary-service';
 import { VocabularyWordCard } from '../src/components/vocabulary-word-card';
+import { AppHeader } from '../src/components/app-header';
 import { useTheme } from '../src/theme/theme-context';
 import { spacing, typography } from '../src/theme/theme';
 
@@ -28,7 +29,7 @@ export default function ListDetailScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Stack.Screen options={{ title: name ?? 'List' }} />
+      <AppHeader title={name ?? 'List'} showBack />
       {loading ? (
         <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 48 }} />
       ) : error ? (

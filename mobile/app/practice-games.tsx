@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../src/lib/auth-context';
 import { LoginRequiredPrompt } from '../src/components/login-required-prompt';
 import { PracticeStatusView } from '../src/components/practice-status-view';
+import { AppHeader } from '../src/components/app-header';
 import { MatchingGame } from '../src/components/matching-game';
 import {
   loadQuizPool, buildChoiceQuestions, QuizQuestion, recordQuizAnswer, MIN_WORDS_FOR_QUIZ,
@@ -19,8 +21,10 @@ const RAPID_SECONDS = 30;
 export default function GamesScreen() {
   const { user } = useAuth();
   const { colors } = useTheme();
+  const params = useLocalSearchParams<{ game?: string }>();
   const [game, setGame] = useState<Game>('menu');
   const [pool, setPool] = useState<VocabularyItem[]>([]);
+  const autoStarted = useRef(false);
 
   // rapid-fire state
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
@@ -31,6 +35,18 @@ export default function GamesScreen() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current); }, []);
+
+  // Deep-link: when launched with ?game=… from the Practice page, jump straight
+  // into that game instead of showing the in-screen game menu.
+  useEffect(() => {
+    if (autoStarted.current || !user) return;
+    const g = params.game;
+    if (g === 'matching' || g === 'rapid') {
+      autoStarted.current = true;
+      launch(g);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.game, user]);
 
   if (!user) {
     return <LoginRequiredPrompt message="Log in to play vocabulary games." />;
@@ -91,16 +107,28 @@ export default function GamesScreen() {
   // ---- render ----
 
   if (game === 'loading') {
-    return <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" color={colors.primary} /></View>;
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <AppHeader title="Games" showBack />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" color={colors.primary} /></View>
+      </View>
+    );
   }
 
   if (game === 'tooFew') {
-    return <PracticeStatusView icon="menu-book" title="Need more words" subtitle={`Save at least ${MIN_WORDS_FOR_QUIZ} words to play games.`} actionLabel="Back" onAction={() => setGame('menu')} />;
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <AppHeader title="Games" showBack />
+        <PracticeStatusView icon="menu-book" title="Need more words" subtitle={`Save at least ${MIN_WORDS_FOR_QUIZ} words to play games.`} actionLabel="Back" onAction={() => setGame('menu')} />
+      </View>
+    );
   }
 
   if (game === 'menu') {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.background, padding: spacing.containerMargin, gap: spacing.md }}>
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <AppHeader title="Games" showBack />
+        <View style={{ flex: 1, padding: spacing.containerMargin, gap: spacing.md }}>
         <Card onPress={() => launch('matching')}>
           <View style={styles.gameCardInner}>
             <Icon name="extension" size={36} color={colors.primary} />
@@ -115,38 +143,47 @@ export default function GamesScreen() {
             <Text style={[typography.pinyin, { color: colors.outline, textAlign: 'center' }]}>Answer as many as you can in {RAPID_SECONDS}s</Text>
           </View>
         </Card>
+        </View>
       </View>
     );
   }
 
   if (game === 'matching') {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.background, padding: spacing.containerMargin }}>
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <AppHeader title="Games" showBack />
+        <View style={{ flex: 1, padding: spacing.containerMargin }}>
         <MatchingGame pool={pool} onFinished={() => setGame('menu')} />
         <Pressable style={{ paddingVertical: 14 }} onPress={() => setGame('menu')}>
           <Text style={[typography.label, { fontSize: 14, color: colors.onSurfaceVariant, textAlign: 'center' }]}>Quit</Text>
         </Pressable>
+        </View>
       </View>
     );
   }
 
   if (game === 'rapidDone') {
     return (
-      <PracticeStatusView
-        icon="bolt"
-        title={`${score} correct`}
-        subtitle={`in ${RAPID_SECONDS} seconds`}
-        actionLabel="Play Again"
-        onAction={() => startRapid(pool)}
-        secondaryLabel="Back to Games"
-        onSecondary={() => setGame('menu')}
-      />
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <AppHeader title="Games" showBack />
+        <PracticeStatusView
+          icon="bolt"
+          title={`${score} correct`}
+          subtitle={`in ${RAPID_SECONDS} seconds`}
+          actionLabel="Play Again"
+          onAction={() => startRapid(pool)}
+          secondaryLabel="Back to Games"
+          onSecondary={() => setGame('menu')}
+        />
+      </View>
     );
   }
 
   const q = questions[qIndex];
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background, padding: spacing.containerMargin }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <AppHeader title="Games" showBack />
+      <View style={{ flex: 1, padding: spacing.containerMargin }}>
       <View style={styles.rapidHeader}>
         <Text style={[typography.heading, { color: colors.primary }]}>Score {score}</Text>
         <Text style={[typography.heading, { color: timeLeft <= 5 ? colors.error : colors.onSurface }]}>{timeLeft}s</Text>
@@ -169,6 +206,7 @@ export default function GamesScreen() {
             </Pressable>
           );
         })}
+      </View>
       </View>
     </View>
   );

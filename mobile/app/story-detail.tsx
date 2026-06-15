@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, Pressable, ActivityIndicator } from 'react-native';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { speakChinese } from '../src/lib/tts-speech-service';
 import { fetchStoryDetail, StoryDetail } from '../src/lib/library-service';
 import { StoryNarrativeSection } from '../src/components/story-narrative-section';
+import { AppHeader } from '../src/components/app-header';
 import { useTheme } from '../src/theme/theme-context';
 import { spacing, radius, typography, fonts } from '../src/theme/theme';
 
@@ -22,15 +23,26 @@ export default function StoryDetailScreen() {
   }, [id]);
 
   if (error) {
-    return <View style={[styles.center, { backgroundColor: colors.background }]}><Text style={[typography.body, { color: colors.error }]}>{error}</Text></View>;
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <AppHeader title="Story" showBack />
+        <View style={styles.center}><Text style={[typography.body, { color: colors.error }]}>{error}</Text></View>
+      </View>
+    );
   }
   if (!story) {
-    return <View style={[styles.center, { backgroundColor: colors.background }]}><ActivityIndicator size="large" color={colors.primary} /></View>;
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <AppHeader title="Story" showBack />
+        <View style={styles.center}><ActivityIndicator size="large" color={colors.primary} /></View>
+      </View>
+    );
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.containerMargin, paddingBottom: 48 }}>
-      <Stack.Screen options={{ title: story.title }} />
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <AppHeader title={story.title} showBack />
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing.containerMargin, paddingBottom: 48 }}>
 
       {story.description ? <Text style={[typography.body, { color: colors.onSurfaceVariant, marginBottom: 4 }]}>{story.description}</Text> : null}
       <Text style={[typography.label, { fontSize: 13, color: colors.outline, marginBottom: spacing.md }]}>
@@ -59,7 +71,8 @@ export default function StoryDetailScreen() {
           {i < story.photos.length - 1 && <View style={{ height: 1, backgroundColor: colors.surfaceContainerHigh, marginVertical: spacing.lg }} />}
         </View>
       ))}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 

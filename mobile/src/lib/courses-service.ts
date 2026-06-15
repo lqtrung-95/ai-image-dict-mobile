@@ -11,7 +11,11 @@ export interface Course {
   wordCount: number;
   creatorName?: string;
   isSubscribed?: boolean;
+  // Present for subscribed courses; drives the progress chip on list cards.
+  progress?: { total: number; learned: number; due: number } | null;
 }
+
+export type CourseWordState = 'new' | 'learning' | 'mastered';
 
 export interface CourseWord {
   id: string;
@@ -21,11 +25,21 @@ export interface CourseWord {
   example_sentence?: string | null;
   hsk_level?: number | null;
   sort_order: number;
+  state?: CourseWordState;
+}
+
+// Per-course learning progress, derived server-side from the user's SRS deck.
+export interface CourseProgress {
+  total: number;
+  learned: number;
+  learning: number;
+  due: number;
 }
 
 export interface CourseDetail {
   course: Course;
   words: CourseWord[];
+  progress?: CourseProgress;
   isSubscribed?: boolean;
   userRating?: { rating: number } | null;
 }

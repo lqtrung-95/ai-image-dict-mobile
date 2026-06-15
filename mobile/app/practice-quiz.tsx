@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, TextInput, StyleSheet, ActivityIndicator } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../src/lib/auth-context';
 import { LoginRequiredPrompt } from '../src/components/login-required-prompt';
 import { PracticeStatusView } from '../src/components/practice-status-view';
+import { AppHeader } from '../src/components/app-header';
 import { speakChinese } from '../src/lib/tts-speech-service';
+import { notifySuccess, notifyError } from '../src/lib/haptics-service';
 import {
   QuizMode, QuizQuestion, loadQuizPool, buildChoiceQuestions, buildPinyinQuestions,
   isPinyinCorrect, recordQuizAnswer, MIN_WORDS_FOR_QUIZ,
@@ -24,6 +27,7 @@ const MODES: { mode: QuizMode; icon: IconName; title: string; desc: string }[] =
 export default function QuizScreen() {
   const { user } = useAuth();
   const { colors } = useTheme();
+  const params = useLocalSearchParams<{ mode?: string }>();
   const [phase, setPhase] = useState<Phase>('menu');
   const [mode, setMode] = useState<QuizMode>('multiple-choice');
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
@@ -32,6 +36,19 @@ export default function QuizScreen() {
   const [selected, setSelected] = useState<number | null>(null);
   const [typed, setTyped] = useState('');
   const [revealed, setRevealed] = useState(false);
+  const autoStarted = useRef(false);
+
+  // Deep-link: when launched with ?mode=… from the Practice page, jump straight
+  // into that quiz mode instead of showing the in-screen mode menu.
+  useEffect(() => {
+    if (autoStarted.current || !user) return;
+    const m = params.mode;
+    if (m === 'multiple-choice' || m === 'listening' || m === 'pinyin') {
+      autoStarted.current = true;
+      start(m);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.mode, user]);
 
   if (!user) {
     return <LoginRequiredPrompt message="Log in to take vocabulary quizzes." />;
@@ -66,18 +83,24 @@ export default function QuizScreen() {
   const handleChoice = (optionIndex: number) => {
     if (selected !== null) return;
     setSelected(optionIndex);
-    setTimeout(() => advance(optionIndex === current.correctIndex), 900);
+    const correct = optionIndex === current.correctIndex;
+    correct ? notifySuccess() : notifyError();
+    setTimeout(() => advance(correct), 900);
   };
 
   const handlePinyinSubmit = () => {
     if (revealed) return;
     setRevealed(true);
-    setTimeout(() => advance(isPinyinCorrect(typed, current.word.wordPinyin)), 1200);
+    const correct = isPinyinCorrect(typed, current.word.wordPinyin);
+    correct ? notifySuccess() : notifyError();
+    setTimeout(() => advance(correct), 1200);
   };
 
   if (phase === 'menu') {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.background, padding: spacing.containerMargin, gap: spacing.md }}>
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <AppHeader title="Quiz" showBack />
+        <View style={{ flex: 1, padding: spacing.containerMargin, gap: spacing.md }}>
         <Text style={[typography.body, { color: colors.onSurfaceVariant }]}>Choose a quiz mode</Text>
         {MODES.map((m) => (
           <Card key={m.mode} onPress={() => start(m.mode)}>
@@ -92,36 +115,57 @@ export default function QuizScreen() {
             </View>
           </Card>
         ))}
+        </View>
       </View>
     );
   }
 
   if (phase === 'loading') {
-    return <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" color={colors.primary} /></View>;
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <AppHeader title="Quiz" showBack />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" color={colors.primary} /></View>
+      </View>
+    );
   }
   if (phase === 'error') {
-    return <PracticeStatusView icon="error-outline" title="Something went wrong" actionLabel="Back to modes" onAction={() => setPhase('menu')} />;
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <AppHeader title="Quiz" showBack />
+        <PracticeStatusView icon="error-outline" title="Something went wrong" actionLabel="Back to modes" onAction={() => setPhase('menu')} />
+      </View>
+    );
   }
   if (phase === 'tooFew') {
-    return <PracticeStatusView icon="menu-book" title="Need more words" subtitle={`Save at least ${MIN_WORDS_FOR_QUIZ} words to play quizzes. Capture more photos!`} actionLabel="Back" onAction={() => setPhase('menu')} />;
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <AppHeader title="Quiz" showBack />
+        <PracticeStatusView icon="menu-book" title="Need more words" subtitle={`Save at least ${MIN_WORDS_FOR_QUIZ} words to play quizzes. Capture more photos!`} actionLabel="Back" onAction={() => setPhase('menu')} />
+      </View>
+    );
   }
   if (phase === 'done') {
     const pct = Math.round((score / questions.length) * 100);
     return (
-      <PracticeStatusView
-        icon={pct >= 80 ? 'emoji-events' : pct >= 50 ? 'thumb-up' : 'fitness-center'}
-        title={`${score} / ${questions.length}`}
-        subtitle={`${pct}% correct`}
-        actionLabel="Play Again"
-        onAction={() => start(mode)}
-        secondaryLabel="Change Mode"
-        onSecondary={() => setPhase('menu')}
-      />
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <AppHeader title="Quiz" showBack />
+        <PracticeStatusView
+          icon={pct >= 80 ? 'emoji-events' : pct >= 50 ? 'thumb-up' : 'fitness-center'}
+          title={`${score} / ${questions.length}`}
+          subtitle={`${pct}% correct`}
+          actionLabel="Play Again"
+          onAction={() => start(mode)}
+          secondaryLabel="Change Mode"
+          onSecondary={() => setPhase('menu')}
+        />
+      </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background, padding: spacing.containerMargin }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <AppHeader title="Quiz" showBack />
+      <View style={{ flex: 1, padding: spacing.containerMargin }}>
       <Text style={[typography.label, { fontSize: 13, color: colors.onSurfaceVariant, textAlign: 'center' }]}>
         {index + 1} / {questions.length}  ·  Score {score}
       </Text>
@@ -185,6 +229,7 @@ export default function QuizScreen() {
           })}
         </View>
       )}
+      </View>
     </View>
   );
 }

@@ -1,10 +1,12 @@
 import { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Image, Pressable, ActivityIndicator, Alert } from 'react-native';
+import { showError } from '../src/lib/toast';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { fetchStories, deleteStory, PhotoStory } from '../src/lib/library-service';
 import { useTheme } from '../src/theme/theme-context';
 import { spacing, radius, typography, makeShadow } from '../src/theme/theme';
 import { Icon } from '../src/theme/ui-primitives';
+import { AppHeader } from '../src/components/app-header';
 
 export default function StoriesScreen() {
   const router = useRouter();
@@ -35,7 +37,7 @@ export default function StoriesScreen() {
             await deleteStory(story.id);
             setStories((prev) => prev.filter((s) => s.id !== story.id));
           } catch {
-            Alert.alert('Delete failed', 'Try again');
+            showError('Delete failed', 'Try again');
           }
         },
       },
@@ -43,11 +45,17 @@ export default function StoriesScreen() {
   };
 
   if (loading) {
-    return <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" color={colors.primary} /></View>;
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <AppHeader title="Photo Stories" showBack />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" color={colors.primary} /></View>
+      </View>
+    );
   }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <AppHeader title="Photo Stories" showBack />
       <FlatList
         data={stories}
         keyExtractor={(s) => s.id}

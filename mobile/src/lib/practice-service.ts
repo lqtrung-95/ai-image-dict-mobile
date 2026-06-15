@@ -21,8 +21,10 @@ export interface DueWordsResponse {
 
 export type SrsRating = 1 | 2 | 3 | 4; // Again / Hard / Good / Easy
 
-export async function fetchDueWords(limit = 20): Promise<DueWordsResponse> {
-  const res = await apiFetch(`/api/practice/due-words?limit=${limit}`);
+export async function fetchDueWords(limit = 20, courseId?: string): Promise<DueWordsResponse> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (courseId) params.set('course', courseId);
+  const res = await apiFetch(`/api/practice/due-words?${params}`);
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? 'Failed to load practice words');
   return data;

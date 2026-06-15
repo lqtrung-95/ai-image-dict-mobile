@@ -76,6 +76,7 @@ export interface WordOfDay {
   word_pinyin: string;
   word_en: string;
   example_sentence?: string | null;
+  example_sentence_en?: string | null;
   hsk_level?: number | null;
 }
 

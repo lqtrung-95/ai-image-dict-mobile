@@ -1,28 +1,70 @@
 import { useCallback, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Pressable, RefreshControl } from 'react-native';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { fetchStats, fetchWordsByState, UserStats, WordsByState } from '../src/lib/stats-service';
-import { DailyGoalCard } from '../src/components/daily-goal-card';
 import { StatsBarChart } from '../src/components/stats-bar-chart';
+import { AppHeader } from '../src/components/app-header';
 import { useTheme } from '../src/theme/theme-context';
 import { spacing, radius, typography, hskColors, makeShadow } from '../src/theme/theme';
 import { Eyebrow, Icon } from '../src/theme/ui-primitives';
+import { MaterialIcons } from '@expo/vector-icons';
 
 const HSK_LABELS: Record<string, string> = {
-  hsk1: 'HSK 1', hsk2: 'HSK 2', hsk3: 'HSK 3', hsk4: 'HSK 4', hsk5: 'HSK 5', hsk6: 'HSK 6', unclassified: 'Other',
+  hsk1: 'HSK 1', hsk2: 'HSK 2', hsk3: 'HSK 3',
+  hsk4: 'HSK 4', hsk5: 'HSK 5', hsk6: 'HSK 6', unclassified: 'Other',
 };
-const STATE_META: { key: keyof WordsByState; label: string; color: string }[] = [
-  { key: 'new', label: 'New', color: '#89938b' },
-  { key: 'learning', label: 'Learning', color: '#d9a14a' },
-  { key: 'reviewing', label: 'Reviewing', color: '#3b82f6' },
-  { key: 'mastered', label: 'Mastered', color: '#2d6a4f' },
-];
+
+// Build a 13×7 heatmap grid from wordsPerDay data
+function buildHeatmap(wordsPerDay: { date: string; count: number }[]) {
+  const map = new Map(wordsPerDay.map((d) => [d.date, d.count]));
+  const today = new Date();
+  const cells: { date: string; count: number }[] = [];
+  for (let i = 90; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    cells.push({ date: key, count: map.get(key) ?? 0 });
+  }
+  // Group into weeks (columns)
+  const weeks: { date: string; count: number }[][] = [];
+  for (let i = 0; i < cells.length; i += 7) {
+    weeks.push(cells.slice(i, i + 7));
+  }
+  return weeks;
+}
+
+function HeatmapCell({ count }: { count: number }) {
+  const { colors } = useTheme();
+  const opacity = count === 0 ? 0 : count < 3 ? 0.3 : count < 6 ? 0.6 : 1;
+  return (
+    <View
+      style={[
+        styles.heatCell,
+        { backgroundColor: count === 0 ? colors.surfaceContainer : colors.primary, opacity: count === 0 ? 1 : opacity },
+      ]}
+    />
+  );
+}
+
+interface Achievement {
+  icon: string;
+  title: string;
+  desc: string;
+  earned: boolean;
+}
+
+function buildAchievements(stats: UserStats, wordsByState: WordsByState | null): Achievement[] {
+  const mastered = wordsByState?.mastered ?? stats.learnedWords;
+  return [
+    { icon: '🖊️', title: 'First Word', desc: 'Save your first word', earned: stats.totalWords >= 1 },
+    { icon: '🔥', title: '3-Day Streak', desc: '3 consecutive days', earned: stats.currentStreak >= 3 },
+    { icon: '📚', title: 'Scholar', desc: '10 words learned', earned: stats.totalWords >= 10 },
+    { icon: '⭐', title: 'Writing Sage', desc: '5 words mastered', earned: mastered >= 5 },
+  ];
+}
 
 export default function ProgressScreen() {
-  const router = useRouter();
   const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
   const [stats, setStats] = useState<UserStats | null>(null);
   const [wordsByState, setWordsByState] = useState<WordsByState | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -36,129 +78,176 @@ export default function ProgressScreen() {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  if (!stats) {
-    return <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" color={colors.primary} /></View>;
-  }
-
-  const masteryPct = stats.totalWords > 0 ? Math.round((stats.learnedWords / stats.totalWords) * 100) : 0;
-  const totalHsk = Object.values(stats.hskDistribution ?? {}).reduce((a, b) => a + b, 0);
-  const totalStates = wordsByState ? STATE_META.reduce((sum, s) => sum + (wordsByState[s.key] ?? 0), 0) : 0;
-
-  const tiles = [
-    { icon: 'local-fire-department' as const, value: stats.currentStreak, label: `Day streak · best ${stats.longestStreak}` },
-    { icon: 'menu-book' as const, value: stats.totalWords, label: 'Total words' },
-    { icon: 'school' as const, value: stats.learnedWords, label: `Mastered${stats.masteredThisWeek > 0 ? ` · +${stats.masteredThisWeek}/wk` : ''}` },
-    { icon: 'fitness-center' as const, value: stats.totalPracticeSessions, label: 'Practice sessions' },
-  ];
-
   const sectionStyle = [styles.section, { backgroundColor: colors.surface, ...makeShadow(colors, 'card') }];
 
+  if (!stats) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <AppHeader />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </View>
+    );
+  }
+
+  const mastered = wordsByState?.mastered ?? stats.learnedWords;
+  const learning = (wordsByState?.learning ?? 0) + (wordsByState?.reviewing ?? 0);
+  const totalHsk = Object.values(stats.hskDistribution ?? {}).reduce((a, b) => a + b, 0);
+  const heatmapWeeks = buildHeatmap(stats.wordsPerDay ?? []);
+  const achievements = buildAchievements(stats, wordsByState);
+
+  const statChips = [
+    { label: 'Mastered', value: mastered, icon: 'school' as const },
+    { label: 'Learning', value: learning, icon: 'menu-book' as const },
+    { label: `${stats.currentStreak} Day Streak`, value: stats.totalWords, icon: 'local-fire-department' as const, sub: 'All Time' },
+  ];
+
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={{ padding: spacing.containerMargin, paddingTop: insets.top + spacing.sm, paddingBottom: 120 }}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} tintColor={colors.primary} />}
-    >
-      <Text style={[typography.headline, { color: colors.onSurface, marginBottom: spacing.md }]}>Progress</Text>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <AppHeader />
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }}
+            tintColor={colors.primary}
+          />
+        }
+      >
+        <Text style={[typography.headlineLg, { color: colors.onSurface, marginBottom: spacing.lg }]}>
+          Mastery Overview
+        </Text>
 
-      {stats.dueToday > 0 && (
-        <Pressable style={[styles.dueCard, { backgroundColor: colors.primarySoft, borderColor: colors.primaryFixed }]} onPress={() => router.push('/practice-flashcards')}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 }}>
-            <Icon name="schedule" size={22} color={colors.primary} />
-            <Text style={[typography.heading, { fontSize: 15, color: colors.onSurface }]}>{stats.dueToday} words due for review</Text>
+        {/* Stat chips row */}
+        <View style={styles.chipRow}>
+          <View style={[styles.chip, { backgroundColor: colors.surface, ...makeShadow(colors, 'card') }]}>
+            <Icon name="school" size={18} color={colors.primary} />
+            <Text style={[typography.headlineLg, { color: colors.onSurface }]}>{mastered}</Text>
+            <Text style={[typography.label, { fontSize: 11, color: colors.outline }]}>Mastered</Text>
           </View>
-          <Icon name="chevron-right" size={22} color={colors.primary} />
-        </Pressable>
-      )}
-
-      <DailyGoalCard />
-
-      <View style={styles.grid}>
-        {tiles.map((t) => (
-          <View key={t.label} style={[styles.tile, { backgroundColor: colors.surface, ...makeShadow(colors, 'card') }]}>
-            <Icon name={t.icon} size={20} color={colors.primary} />
-            <Text style={{ ...typography.headlineLg, color: colors.onSurface, marginTop: spacing.xs }}>{t.value}</Text>
-            <Text style={[typography.label, { fontSize: 11, color: colors.outline }]}>{t.label}</Text>
+          <View style={[styles.chip, { backgroundColor: colors.surface, ...makeShadow(colors, 'card') }]}>
+            <Icon name="menu-book" size={18} color={colors.primary} />
+            <Text style={[typography.headlineLg, { color: colors.onSurface }]}>{learning}</Text>
+            <Text style={[typography.label, { fontSize: 11, color: colors.outline }]}>Learning</Text>
           </View>
-        ))}
-      </View>
-
-      <View style={sectionStyle}>
-        <View style={styles.sectionHead}>
-          <Eyebrow>Mastery</Eyebrow>
-          <Text style={[typography.heading, { color: colors.primary }]}>{masteryPct}%</Text>
+          <View style={[styles.chip, { backgroundColor: colors.surface, ...makeShadow(colors, 'card') }]}>
+            <MaterialIcons name="local-fire-department" size={18} color={colors.primary} />
+            <Text style={[typography.headlineLg, { color: colors.onSurface }]}>{stats.currentStreak}</Text>
+            <Text style={[typography.label, { fontSize: 11, color: colors.outline }]}>Day Streak</Text>
+          </View>
         </View>
-        <View style={[styles.track, { backgroundColor: colors.background }]}>
-          <View style={{ height: '100%', width: `${masteryPct}%`, backgroundColor: colors.primary }} />
-        </View>
-      </View>
 
-      {wordsByState && totalStates > 0 && (
+        {/* Study Consistency heatmap */}
         <View style={sectionStyle}>
-          <Eyebrow>Word States</Eyebrow>
-          <View style={styles.stateBar}>
-            {STATE_META.map(({ key, color }) => {
-              const w = (wordsByState[key] / totalStates) * 100;
-              return w > 0 ? <View key={key} style={{ width: `${w}%`, backgroundColor: color }} /> : null;
+          <Eyebrow style={{ marginBottom: spacing.xs }}>Study Consistency</Eyebrow>
+          <Text style={[typography.label, { fontSize: 11, color: colors.outline, marginBottom: spacing.sm }]}>
+            Last 13 weeks of character practice
+          </Text>
+          <View style={styles.heatmapGrid}>
+            {heatmapWeeks.map((week, wi) => (
+              <View key={wi} style={styles.heatmapCol}>
+                {week.map((cell, di) => (
+                  <HeatmapCell key={di} count={cell.count} />
+                ))}
+              </View>
+            ))}
+          </View>
+          {stats.currentStreak > 0 && (
+            <View style={[styles.streakBadge, { backgroundColor: colors.primaryContainer }]}>
+              <MaterialIcons name="local-fire-department" size={14} color={colors.onPrimaryContainer} />
+              <Text style={[typography.label, { fontSize: 11, color: colors.onPrimaryContainer }]}>
+                {stats.currentStreak} Day Streak
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* HSK Level Distribution */}
+        {totalHsk > 0 && (
+          <View style={sectionStyle}>
+            <Eyebrow style={{ marginBottom: spacing.sm }}>HSK Level Distribution</Eyebrow>
+            {Object.entries(stats.hskDistribution).map(([level, count]) => {
+              if (!count) return null;
+              const pct = Math.round((count / totalHsk) * 100);
+              return (
+                <View key={level} style={{ marginBottom: spacing.sm }}>
+                  <View style={styles.barRow}>
+                    <Text style={[typography.label, { fontSize: 12, color: colors.onSurfaceVariant }]}>
+                      {HSK_LABELS[level] ?? level}
+                    </Text>
+                    <Text style={[typography.label, { fontSize: 12, color: colors.outline }]}>
+                      {count}
+                    </Text>
+                  </View>
+                  <View style={[styles.track, { backgroundColor: colors.surfaceContainer }]}>
+                    <View style={{ height: '100%', width: `${pct}%`, backgroundColor: hskColors[level] ?? colors.primary, borderRadius: 4 }} />
+                  </View>
+                </View>
+              );
             })}
           </View>
-          <View style={styles.legend}>
-            {STATE_META.map(({ key, label, color }) => (
-              <View key={key} style={styles.legendItem}>
-                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />
-                <Text style={[typography.label, { fontSize: 11, color: colors.onSurfaceVariant }]}>{label} {wordsByState[key]}</Text>
+        )}
+
+        {/* Review Forecast */}
+        {stats.reviewForecast?.length > 0 && (
+          <View style={sectionStyle}>
+            <Eyebrow style={{ marginBottom: spacing.md }}>Review Forecast</Eyebrow>
+            <StatsBarChart data={stats.reviewForecast} />
+          </View>
+        )}
+
+        {/* Achievements */}
+        <View style={sectionStyle}>
+          <Eyebrow style={{ marginBottom: spacing.sm }}>Achievements</Eyebrow>
+          <View style={styles.achievementsGrid}>
+            {achievements.map((a) => (
+              <View
+                key={a.title}
+                style={[
+                  styles.achievementBadge,
+                  { backgroundColor: a.earned ? colors.primaryContainer : colors.surfaceContainer, opacity: a.earned ? 1 : 0.5 },
+                ]}
+              >
+                <Text style={{ fontSize: 22 }}>{a.icon}</Text>
+                <Text style={[typography.label, { fontSize: 11, color: a.earned ? colors.onPrimaryContainer : colors.onSurfaceVariant, textAlign: 'center' }]}>
+                  {a.title}
+                </Text>
+                <Text style={[typography.label, { fontSize: 10, color: a.earned ? colors.onPrimaryContainer : colors.outline, textAlign: 'center' }]}>
+                  {a.desc}
+                </Text>
               </View>
             ))}
           </View>
         </View>
-      )}
-
-      {totalHsk > 0 && (
-        <View style={sectionStyle}>
-          <Eyebrow style={{ marginBottom: spacing.sm }}>HSK Levels</Eyebrow>
-          {Object.entries(stats.hskDistribution).map(([level, count]) => {
-            if (!count) return null;
-            const pct = Math.round((count / totalHsk) * 100);
-            return (
-              <View key={level} style={{ marginBottom: spacing.sm }}>
-                <View style={styles.sectionHead}>
-                  <Text style={[typography.label, { fontSize: 12, color: colors.onSurfaceVariant }]}>{HSK_LABELS[level] ?? level}</Text>
-                  <Text style={[typography.label, { fontSize: 12, color: colors.outline }]}>{count} ({pct}%)</Text>
-                </View>
-                <View style={[styles.track, { backgroundColor: colors.background }]}>
-                  <View style={{ height: '100%', width: `${pct}%`, backgroundColor: hskColors[level] ?? colors.primary }} />
-                </View>
-              </View>
-            );
-          })}
-        </View>
-      )}
-
-      {stats.reviewForecast?.length > 0 && (
-        <View style={sectionStyle}>
-          <Eyebrow style={{ marginBottom: spacing.md }}>Review Forecast (7 days)</Eyebrow>
-          <StatsBarChart data={stats.reviewForecast} />
-        </View>
-      )}
-
-      {stats.wordsPerDay?.length > 0 && (
-        <View style={sectionStyle}>
-          <Eyebrow style={{ marginBottom: spacing.md }}>Words Added (7 days)</Eyebrow>
-          <StatsBarChart data={stats.wordsPerDay} />
-        </View>
-      )}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  dueCard: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.md },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
-  tile: { width: '47%', flexGrow: 1, borderRadius: radius.lg, padding: spacing.md },
+  content: { padding: spacing.containerMargin, paddingBottom: 120 },
+  chipRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
+  chip: {
+    flex: 1, borderRadius: radius.lg, padding: spacing.sm,
+    alignItems: 'center', gap: 3,
+  },
   section: { borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.md },
-  sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
+  heatmapGrid: { flexDirection: 'row', gap: 2 },
+  heatmapCol: { flex: 1, flexDirection: 'column', gap: 2 },
+  heatCell: { height: 12, borderRadius: 2 },
+  streakBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderRadius: radius.md, paddingHorizontal: spacing.sm, paddingVertical: 5,
+    alignSelf: 'flex-start',
+  },
+  barRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
   track: { height: 8, borderRadius: 4, overflow: 'hidden' },
-  stateBar: { flexDirection: 'row', height: 12, borderRadius: 6, overflow: 'hidden', marginTop: spacing.sm, marginBottom: spacing.sm },
-  legend: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  achievementsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  achievementBadge: {
+    width: '47%', borderRadius: radius.lg, padding: spacing.sm,
+    alignItems: 'center', gap: 4,
+  },
 });

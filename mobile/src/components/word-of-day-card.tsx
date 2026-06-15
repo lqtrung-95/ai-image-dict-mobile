@@ -1,15 +1,58 @@
-import { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Modal, Alert } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { View, Text, Pressable, StyleSheet, Modal, Alert, Animated, ActivityIndicator } from 'react-native';
 import { speakChinese } from '../lib/tts-speech-service';
 import { fetchWordOfDay, saveWordOfDay, WordOfDay } from '../lib/stats-service';
 import { useTheme } from '../theme/theme-context';
 import { spacing, radius, typography, fonts, makeShadow } from '../theme/theme';
 import { Icon, Eyebrow } from '../theme/ui-primitives';
 
+function SkeletonBlock({ width, height, style }: { width: number | string; height: number; style?: object }) {
+  const { colors } = useTheme();
+  const anim = useRef(new Animated.Value(0.4)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(anim, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(anim, { toValue: 0.4, duration: 700, useNativeDriver: true }),
+      ])
+    ).start();
+    return () => anim.stopAnimation();
+  }, [anim]);
+  return (
+    <Animated.View
+      style={[{ width, height, borderRadius: 6, backgroundColor: colors.surfaceContainer, opacity: anim }, style]}
+    />
+  );
+}
+
+function WordOfDayCardSkeleton() {
+  const { colors } = useTheme();
+  return (
+    <View>
+      <View style={styles.headerRow}>
+        <SkeletonBlock width={120} height={12} />
+      </View>
+      <View style={[styles.card, { backgroundColor: colors.surface }]}>
+        <View style={styles.center}>
+          <SkeletonBlock width={160} height={160} style={{ borderRadius: 8 }} />
+          <SkeletonBlock width={100} height={22} style={{ marginTop: spacing.lg }} />
+          <SkeletonBlock width={48} height={2} style={{ marginVertical: spacing.sm }} />
+          <SkeletonBlock width={220} height={14} style={{ marginTop: 4 }} />
+          <SkeletonBlock width={180} height={12} style={{ marginTop: 6 }} />
+        </View>
+        <View style={[styles.footer, { borderTopColor: colors.surfaceContainer }]}>
+          {[0, 1, 2].map((i) => <SkeletonBlock key={i} width={60} height={20} />)}
+        </View>
+      </View>
+    </View>
+  );
+}
+
 // Daily curated HSK word, styled as the Stitch "Word of the Day" rice-grid card.
 export function WordOfDayCard() {
   const { colors } = useTheme();
   const [word, setWord] = useState<WordOfDay | null>(null);
+  const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [practiceOpen, setPracticeOpen] = useState(false);
@@ -17,9 +60,10 @@ export function WordOfDayCard() {
   useEffect(() => {
     fetchWordOfDay().then((res) => {
       if (res) { setWord(res.word); setSaved(res.alreadySaved); }
-    }).catch(() => {});
+    }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
+  if (loading) return <WordOfDayCardSkeleton />;
   if (!word) return null;
 
   const handleSave = async () => {
@@ -55,6 +99,9 @@ export function WordOfDayCard() {
           {word.example_sentence ? (
             <Text style={[styles.example, { color: colors.onSurfaceVariant }]}>{word.example_sentence}</Text>
           ) : null}
+          {word.example_sentence_en ? (
+            <Text style={[styles.exampleEn, { color: colors.outline }]}>{word.example_sentence_en}</Text>
+          ) : null}
         </View>
 
         {/* Footer actions */}
@@ -68,9 +115,12 @@ export function WordOfDayCard() {
             <Text style={[typography.label, { color: colors.primary }]}>Practice</Text>
           </Pressable>
           <Pressable style={styles.footerBtn} onPress={handleSave} disabled={saved || saving}>
-            <Icon name={saved ? 'bookmark' : 'bookmark-border'} size={18} color={colors.primary} />
+            {saving
+              ? <ActivityIndicator size="small" color={colors.primary} />
+              : <Icon name={saved ? 'bookmark' : 'bookmark-border'} size={18} color={colors.primary} />
+            }
             <Text style={[typography.label, { color: colors.primary }]}>
-              {saved ? 'Saved' : saving ? '…' : 'Save'}
+              {saved ? 'Saved' : saving ? 'Saving' : 'Save'}
             </Text>
           </Pressable>
         </View>
@@ -129,6 +179,7 @@ const styles = StyleSheet.create({
   meaning: { fontFamily: fonts.headline, fontSize: 22, marginTop: spacing.lg },
   divider: { height: 2, width: 48, borderRadius: 1, marginVertical: spacing.sm },
   example: { ...typography.body, fontStyle: 'italic', textAlign: 'center', paddingHorizontal: spacing.md },
+  exampleEn: { ...typography.pinyin, fontSize: 13, fontStyle: 'italic', textAlign: 'center', paddingHorizontal: spacing.md, marginTop: 4 },
   footer: {
     flexDirection: 'row', justifyContent: 'space-around', borderTopWidth: 1,
     marginTop: spacing.md, paddingTop: spacing.md,

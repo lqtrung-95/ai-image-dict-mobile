@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ViewStyle } from 'react-native';
 import { speakChinese } from '../lib/tts-speech-service';
+import { notifySuccess, notifyError } from '../lib/haptics-service';
 import type { VocabularyItem } from '../lib/vocabulary-service';
 import { useTheme } from '../theme/theme-context';
 import { spacing, radius, typography, fonts } from '../theme/theme';
@@ -49,6 +50,7 @@ export function MatchingGame({ pool, onFinished }: { pool: VocabularyItem[]; onF
   const handleEn = (tile: Tile) => {
     if (matched.has(tile.wordId) || selectedZh === null) return;
     if (tile.wordId === selectedZh) {
+      notifySuccess();
       const next = new Set(matched).add(tile.wordId);
       setMatched(next);
       setSelectedZh(null);
@@ -57,6 +59,7 @@ export function MatchingGame({ pool, onFinished }: { pool: VocabularyItem[]; onF
       }
     } else {
       // flash wrong, then clear selection
+      notifyError();
       setWrong(tile.wordId);
       setTimeout(() => {
         setWrong(null);
@@ -77,28 +80,37 @@ export function MatchingGame({ pool, onFinished }: { pool: VocabularyItem[]; onF
       <Text style={[typography.label, { fontSize: 14, color: colors.onSurfaceVariant, textAlign: 'center', marginBottom: spacing.md }]}>
         Matched {matched.size} / {Math.min(PAIRS_PER_ROUND, pool.length)}
       </Text>
-      <View style={styles.columns}>
-        <View style={styles.column}>
-          {zhTiles.map((tile) => (
-            <Pressable key={tile.key} style={[styles.tileBase, tileStyle(tile, selectedZh === tile.wordId)]} onPress={() => handleZh(tile)} disabled={matched.has(tile.wordId)}>
-              <Text style={{ fontFamily: fonts.hanzi, fontSize: 24, color: colors.onSurface, textAlign: 'center' }}>{tile.label}</Text>
-            </Pressable>
-          ))}
-        </View>
-        <View style={styles.column}>
-          {enTiles.map((tile) => (
-            <Pressable key={tile.key} style={[styles.tileBase, tileStyle(tile, false)]} onPress={() => handleEn(tile)} disabled={matched.has(tile.wordId)}>
-              <Text style={[typography.body, { color: colors.onSurface, textAlign: 'center' }]}>{tile.label}</Text>
-            </Pressable>
-          ))}
-        </View>
+      <View style={styles.grid}>
+        {zhTiles.map((zhTile, i) => {
+          const enTile = enTiles[i];
+          return (
+            <View key={zhTile.key} style={styles.row}>
+              <Pressable
+                style={[styles.tileBase, { flex: 1 }, tileStyle(zhTile, selectedZh === zhTile.wordId)]}
+                onPress={() => handleZh(zhTile)}
+                disabled={matched.has(zhTile.wordId)}
+              >
+                <Text style={{ fontFamily: fonts.hanzi, fontSize: 24, color: colors.onSurface, textAlign: 'center' }}>{zhTile.label}</Text>
+              </Pressable>
+              {enTile && (
+                <Pressable
+                  style={[styles.tileBase, { flex: 1 }, tileStyle(enTile, false)]}
+                  onPress={() => handleEn(enTile)}
+                  disabled={matched.has(enTile.wordId)}
+                >
+                  <Text style={[typography.body, { color: colors.onSurface, textAlign: 'center' }]}>{enTile.label}</Text>
+                </Pressable>
+              )}
+            </View>
+          );
+        })}
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  columns: { flexDirection: 'row', gap: spacing.sm },
-  column: { flex: 1, gap: spacing.sm },
+  grid: { gap: spacing.sm },
+  row: { flexDirection: 'row', gap: spacing.sm, alignItems: 'stretch' },
   tileBase: { borderRadius: radius.md, padding: spacing.md, minHeight: 64, justifyContent: 'center', borderWidth: 1.5 },
 });

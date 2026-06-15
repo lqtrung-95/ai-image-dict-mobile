@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { View, Text, TextInput, FlatList, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AppHeader } from '../../src/components/app-header';
 import { useAuth } from '../../src/lib/auth-context';
 import { LoginRequiredPrompt } from '../../src/components/login-required-prompt';
 import { VocabularyWordCard } from '../../src/components/vocabulary-word-card';
@@ -63,7 +64,9 @@ export default function VocabularyScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background, paddingHorizontal: spacing.containerMargin, paddingTop: insets.top + spacing.sm }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <AppHeader />
+      <View style={{ flex: 1, paddingHorizontal: spacing.containerMargin, paddingTop: spacing.md }}>
       <Text style={[typography.headline, { color: colors.onSurface, marginBottom: spacing.md }]}>Library</Text>
 
       <View style={[searchStyles.bar, { backgroundColor: colors.surface, borderColor: colors.outlineVariant }]}>
@@ -114,6 +117,7 @@ export default function VocabularyScreen() {
           contentContainerStyle={{ paddingBottom: 120 }}
         />
       )}
+      </View>
     </View>
   );
 }
