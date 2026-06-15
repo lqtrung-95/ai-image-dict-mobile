@@ -4,6 +4,7 @@ import { showError } from '../../src/lib/toast';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as WebBrowser from 'expo-web-browser';
 import { useAuth } from '../../src/lib/auth-context';
 import { exportVocabularyToAnki } from '../../src/lib/anki-export-service';
 import { TextInputModal } from '../../src/components/text-input-modal';
@@ -222,6 +223,13 @@ export default function ProfileScreen() {
             icon="ios-share"
             label={busy === 'anki' ? 'Preparing…' : 'Export Data'}
             onPress={() => run('anki', exportVocabularyToAnki, 'Export failed')}
+            colors={colors}
+          />
+          <View style={[styles.divider, { backgroundColor: colors.outlineVariant }]} />
+          <SettingRow
+            icon="privacy-tip"
+            label="Privacy Policy"
+            onPress={() => WebBrowser.openBrowserAsync(`${process.env.EXPO_PUBLIC_API_URL}/privacy`)}
             colors={colors}
           />
         </View>
