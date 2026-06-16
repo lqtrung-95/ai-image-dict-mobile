@@ -3,7 +3,7 @@ import {
   View, Text, FlatList, Pressable, StyleSheet, ActivityIndicator,
   TextInput, ListRenderItemInfo,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { speakChinese } from '../src/lib/tts-speech-service';
 import {
   fetchCourseDetail, subscribeToCourse, unsubscribeFromCourse, rateCourse,
@@ -83,7 +83,8 @@ export default function CourseDetailScreen() {
     }
   }, [id, buildUrl]);
 
-  useEffect(() => { loadCourse(); }, [loadCourse]);
+  // Reload on focus so enrollment/unsubscription state is fresh when navigating back
+  useFocusEffect(useCallback(() => { loadCourse(); }, [loadCourse]));
   useEffect(() => { fetchLists().then(setLists).catch(() => {}); }, []);
 
   const loadNextPage = useCallback(async () => {
@@ -143,11 +144,16 @@ export default function CourseDetailScreen() {
   const toggleSubscribe = async () => {
     if (!detail) return;
     setBusy(true);
+    const wasSubscribed = detail.isSubscribed ?? detail.course.isSubscribed ?? false;
     try {
-      const subscribed = detail.isSubscribed ?? detail.course.isSubscribed ?? false;
-      if (subscribed) await unsubscribeFromCourse(id);
-      else await subscribeToCourse(id);
-      loadCourse(search);
+      if (wasSubscribed) {
+        await unsubscribeFromCourse(id);
+        await loadCourse(search);
+      } else {
+        await subscribeToCourse(id);
+        // Navigate straight to flashcards — user clicked "Enroll & start learning"
+        router.push({ pathname: '/practice-flashcards', params: { course: id } });
+      }
     } catch (err) {
       showError('Action failed', err instanceof Error ? err.message : 'Try again');
     } finally {

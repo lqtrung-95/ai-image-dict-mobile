@@ -23,6 +23,7 @@ interface Quiz {
   badge?: string;
   badgeColor?: string;
   score?: string;
+  premium?: boolean;
 }
 
 interface MiniGame {
@@ -31,6 +32,7 @@ interface MiniGame {
   title: string;
   subtitle: string;
   stat: string;
+  premium?: boolean;
 }
 
 const QUIZZES: Quiz[] = [
@@ -49,6 +51,7 @@ const QUIZZES: Quiz[] = [
     subtitle: 'Meaning & contextual usage',
     badge: 'Lv 2',
     badgeColor: '#4caf50',
+    premium: true,
   },
   {
     href: { pathname: '/practice-quiz', params: { mode: 'listening' } },
@@ -56,6 +59,7 @@ const QUIZZES: Quiz[] = [
     title: 'Listening Challenge',
     subtitle: 'Audio identification mastery',
     score: 'Score 850',
+    premium: true,
   },
   {
     href: { pathname: '/practice-quiz', params: { mode: 'pinyin' } },
@@ -64,6 +68,7 @@ const QUIZZES: Quiz[] = [
     subtitle: 'Tone and spelling accuracy',
     badge: 'Lv 4',
     badgeColor: '#e53935',
+    premium: true,
   },
   {
     href: '/practice-handwriting',
@@ -72,6 +77,7 @@ const QUIZZES: Quiz[] = [
     subtitle: 'Trace characters stroke by stroke',
     badge: 'New',
     badgeColor: '#0f5238',
+    premium: true,
   },
 ];
 
@@ -82,6 +88,7 @@ const MINI_GAMES: MiniGame[] = [
     title: 'Character Match',
     subtitle: 'Speed matching pair puzzle',
     stat: 'Top: 1240',
+    premium: true,
   },
   {
     href: { pathname: '/practice-games', params: { game: 'rapid' } },
@@ -89,6 +96,7 @@ const MINI_GAMES: MiniGame[] = [
     title: 'Speed Quiz',
     subtitle: 'Rapid-fire character recall',
     stat: 'Streak: 12',
+    premium: true,
   },
 ];
 
@@ -158,21 +166,32 @@ export default function PracticeMenuScreen() {
           {QUIZZES.map((q, i) => (
             <View key={q.title}>
               {i > 0 && <View style={[styles.divider, { backgroundColor: colors.outlineVariant }]} />}
-              <Pressable style={styles.quizRow} onPress={() => router.push(q.href)}>
-                <View style={[styles.quizIcon, { backgroundColor: colors.primarySoft }]}>
-                  <Icon name={q.icon} size={22} color={colors.primary} />
+              <Pressable
+                style={styles.quizRow}
+                onPress={() => q.premium ? router.push('/premium' as never) : router.push(q.href)}
+              >
+                <View style={[styles.quizIcon, { backgroundColor: q.premium ? colors.surfaceContainer : colors.primarySoft }]}>
+                  <Icon name={q.icon} size={22} color={q.premium ? colors.outline : colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[typography.heading, { color: colors.onSurface }]}>{q.title}</Text>
+                  <Text style={[typography.heading, { color: q.premium ? colors.outline : colors.onSurface }]}>{q.title}</Text>
                   <Text style={[typography.body, { fontSize: 13, color: colors.outline }]}>{q.subtitle}</Text>
                 </View>
-                {q.badge && (
-                  <View style={[styles.pill, { backgroundColor: q.badgeColor ?? colors.primary }]}>
-                    <Text style={[typography.label, { fontSize: 11, color: '#fff' }]}>{q.badge}</Text>
+                {q.premium ? (
+                  <View style={[styles.pill, { backgroundColor: '#b8860b22' }]}>
+                    <Text style={{ fontSize: 12 }}>👑</Text>
                   </View>
-                )}
-                {q.score && (
-                  <Text style={[typography.label, { fontSize: 12, color: colors.primary }]}>{q.score}</Text>
+                ) : (
+                  <>
+                    {q.badge && (
+                      <View style={[styles.pill, { backgroundColor: q.badgeColor ?? colors.primary }]}>
+                        <Text style={[typography.label, { fontSize: 11, color: '#fff' }]}>{q.badge}</Text>
+                      </View>
+                    )}
+                    {q.score && (
+                      <Text style={[typography.label, { fontSize: 12, color: colors.primary }]}>{q.score}</Text>
+                    )}
+                  </>
                 )}
                 <MaterialIcons name="chevron-right" size={18} color={colors.outline} />
               </Pressable>
@@ -193,16 +212,23 @@ export default function PracticeMenuScreen() {
             <Pressable
               key={g.title}
               style={[styles.miniCard, { backgroundColor: colors.surface, ...makeShadow(colors, 'card') }]}
-              onPress={() => router.push(g.href)}
+              onPress={() => g.premium ? router.push('/premium' as never) : router.push(g.href)}
             >
-              <View style={[styles.miniIcon, { backgroundColor: colors.primarySoft }]}>
-                <Icon name={g.icon} size={26} color={colors.primary} />
+              {g.premium && (
+                <View style={[styles.crownBadge, { backgroundColor: '#b8860b22' }]}>
+                  <Text style={{ fontSize: 11 }}>👑</Text>
+                </View>
+              )}
+              <View style={[styles.miniIcon, { backgroundColor: g.premium ? colors.surfaceContainer : colors.primarySoft }]}>
+                <Icon name={g.icon} size={26} color={g.premium ? colors.outline : colors.primary} />
               </View>
-              <Text style={[typography.heading, { color: colors.onSurface, marginTop: spacing.sm }]}>{g.title}</Text>
+              <View style={{ marginTop: spacing.sm }}>
+                <Text style={[typography.heading, { color: g.premium ? colors.outline : colors.onSurface }]}>{g.title}</Text>
+              </View>
               <Text style={[typography.body, { fontSize: 12, color: colors.outline }]}>{g.subtitle}</Text>
               <View style={[styles.miniStatRow, { borderTopColor: colors.outlineVariant }]}>
-                <Text style={[typography.label, { fontSize: 11, color: colors.outline }]}>{g.stat}</Text>
-                <MaterialIcons name="arrow-forward" size={14} color={colors.primary} />
+                <Text style={[typography.label, { fontSize: 11, color: colors.outline }]}>{g.premium ? 'Premium' : g.stat}</Text>
+                <MaterialIcons name="arrow-forward" size={14} color={g.premium ? colors.outline : colors.primary} />
               </View>
             </Pressable>
           ))}
@@ -267,7 +293,11 @@ const styles = StyleSheet.create({
   divider: { height: StyleSheet.hairlineWidth, marginLeft: 44 + spacing.md * 2 },
   // Mini games
   miniGamesRow: { flexDirection: 'row', gap: spacing.md },
-  miniCard: { flex: 1, borderRadius: radius.lg, padding: spacing.md },
+  miniCard: { flex: 1, borderRadius: radius.lg, padding: spacing.md, position: 'relative' },
+  crownBadge: {
+    position: 'absolute', top: spacing.sm, right: spacing.sm,
+    borderRadius: radius.pill, paddingHorizontal: 6, paddingVertical: 2, zIndex: 1,
+  },
   miniIcon: { width: 52, height: 52, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
   miniStatRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

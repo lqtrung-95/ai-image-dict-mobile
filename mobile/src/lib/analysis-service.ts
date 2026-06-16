@@ -13,7 +13,8 @@ export interface DetectedWord {
 
 export interface AnalysisResult {
   id?: string;
-  imageUri: string; // local uri for display
+  imageUri: string;    // local temp URI for immediate display
+  imageUrl?: string;   // server-stored URL (Supabase Storage) — used for stories & history
   sceneDescription: string;
   sceneDescriptionZh?: string;
   sceneDescriptionPinyin?: string;
@@ -22,7 +23,7 @@ export interface AnalysisResult {
 }
 
 const TRIAL_COUNT_KEY = 'trialAnalysesUsed';
-export const TRIAL_LIMIT = 2;
+export const TRIAL_LIMIT = 1;
 
 export async function getTrialUsed(): Promise<number> {
   const raw = await AsyncStorage.getItem(TRIAL_COUNT_KEY);
@@ -92,6 +93,7 @@ export async function analyzePhoto(
   return {
     id: data.id,
     imageUri: localUri,
+    imageUrl: data.imageUrl ?? undefined,
     sceneDescription: data.sceneDescription ?? '',
     sceneDescriptionZh: data.sceneDescriptionZh,
     sceneDescriptionPinyin: data.sceneDescriptionPinyin,

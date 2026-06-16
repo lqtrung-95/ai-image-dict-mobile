@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { View, Text, TextInput, FlatList, Pressable, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../src/lib/auth-context';
 import { fetchCourses, Course, CourseSort } from '../src/lib/courses-service';
 import { useTheme } from '../src/theme/theme-context';
 import { spacing, radius, typography, fonts, makeShadow } from '../src/theme/theme';
@@ -16,6 +17,7 @@ const SORTS: { value: CourseSort; label: string }[] = [
 export default function CoursesScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { user } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -47,6 +49,23 @@ export default function CoursesScreen() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <AppHeader title="Community Courses" showBack />
       <View style={{ flex: 1, padding: spacing.containerMargin }}>
+      {/* Premium upsell banner — only shown to free / guest users */}
+      {!user && (
+        <Pressable
+          style={[styles.premiumBanner, { backgroundColor: colors.primary }]}
+          onPress={() => router.push('/premium' as never)}
+        >
+          <Text style={{ fontSize: 20 }}>👑</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[typography.label, { fontSize: 13, color: colors.onPrimary }]}>Unlock Premium</Text>
+            <Text style={[typography.body, { fontSize: 12, color: colors.onPrimary, opacity: 0.85 }]}>
+              Unlimited analyses · all quizzes · mini games
+            </Text>
+          </View>
+          <Text style={[typography.label, { fontSize: 12, color: colors.onPrimary, opacity: 0.9 }]}>$3.50/mo →</Text>
+        </Pressable>
+      )}
+
       <View style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.outlineVariant }]}>
         <Icon name="search" size={20} color={colors.outline} />
         <TextInput
@@ -153,4 +172,9 @@ const styles = StyleSheet.create({
   chipText: { fontFamily: fonts.label, fontSize: 13, lineHeight: 18, letterSpacing: 0.3 },
   card: { borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.sm },
   pager: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.lg, paddingVertical: spacing.md },
+  premiumBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    borderRadius: radius.lg, paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+  },
 });
