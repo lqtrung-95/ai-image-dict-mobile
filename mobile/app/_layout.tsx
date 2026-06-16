@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Stack, useRouter } from 'expo-router';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
@@ -17,19 +17,32 @@ import { NetworkProvider, useNetwork } from '../src/lib/network-context';
 import { OfflineScreen } from '../src/components/offline-screen';
 import { configureNotificationHandler, syncReminderOnLaunch } from '../src/lib/notifications-service';
 import { ONBOARDING_DONE_KEY } from './onboarding';
+import { initPurchases } from '../src/lib/purchases-service';
+import { PremiumProvider, usePremium } from '../src/lib/premium-context';
 
 SplashScreen.preventAutoHideAsync();
-// Configure how reminders display while the app is foregrounded (module scope so
-// it runs once before any notification can fire).
 configureNotificationHandler();
+// Initialize RevenueCat at module scope — runs once before any screen mounts.
+initPurchases();
 
 function RootNavigator() {
-  const { loading } = useAuth();
+  const { loading, user } = useAuth();
   const { colors } = useTheme();
   const { isOnline } = useNetwork();
+  const { onLogin, onLogout } = usePremium();
   const router = useRouter();
   const [onboardingChecked, setOnboardingChecked] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const prevUserId = useRef<string | null>(null);
+
+  // Sync RevenueCat user identity whenever auth state changes
+  useEffect(() => {
+    if (loading) return;
+    const id = user?.id ?? null;
+    if (id && id !== prevUserId.current) onLogin(id);
+    if (!id && prevUserId.current) onLogout();
+    prevUserId.current = id;
+  }, [user, loading, onLogin, onLogout]);
 
   // Read the onboarding flag once; defer the actual navigation until the
   // navigator below is mounted (see the next effect).
@@ -77,6 +90,7 @@ function RootNavigator() {
           <Stack.Screen name="course-detail" options={{ headerShown: false }} />
           <Stack.Screen name="import-vocabulary" options={{ headerShown: false }} />
           <Stack.Screen name="notification-settings" options={{ headerShown: false }} />
+          <Stack.Screen name="premium" options={{ headerShown: false }} />
         </Stack>
         {/* NavDrawer must render after Stack so it sits on top in z-order */}
         <NavDrawer />
@@ -119,9 +133,11 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <NetworkProvider>
-          <RootNavigator />
-        </NetworkProvider>
+        <PremiumProvider>
+          <NetworkProvider>
+            <RootNavigator />
+          </NetworkProvider>
+        </PremiumProvider>
       </AuthProvider>
     </ThemeProvider>
   );
