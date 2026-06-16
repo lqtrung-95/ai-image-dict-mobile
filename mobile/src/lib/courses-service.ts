@@ -64,8 +64,8 @@ export async function fetchCourses(opts: {
   return { courses: data.courses ?? [], totalPages: data.totalPages ?? 1 };
 }
 
-export async function fetchCourseDetail(id: string): Promise<CourseDetail> {
-  const res = await apiFetch(`/api/courses/${id}`);
+export async function fetchCourseDetail(id: string, url?: string): Promise<CourseDetail> {
+  const res = await apiFetch(url ?? `/api/courses/${id}`);
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? 'Failed to load course');
   return data;
