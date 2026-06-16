@@ -5,7 +5,10 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as WebBrowser from 'expo-web-browser';
+import { Platform } from 'react-native';
+import Purchases from 'react-native-purchases';
 import { useAuth } from '../../src/lib/auth-context';
+import { usePremium } from '../../src/lib/premium-context';
 import { exportVocabularyToAnki } from '../../src/lib/anki-export-service';
 import { TextInputModal } from '../../src/components/text-input-modal';
 import { fetchProfile, updateDisplayName, deleteAccount, uploadAvatar } from '../../src/lib/user-settings-service';
@@ -46,6 +49,7 @@ function computeHskBadge(dist: Record<string, number>): string | null {
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
+  const { isPremiumUser, refresh: refreshPremium } = usePremium();
   const { colors, mode, setMode } = useTheme();
   const router = useRouter();
   const [displayName, setDisplayName] = useState<string | null>(null);
@@ -199,6 +203,57 @@ export default function ProfileScreen() {
               <StatCardSkeleton />
             </>
           )}
+        </View>
+
+        {/* Premium section */}
+        <Text style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}>Subscription</Text>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          {isPremiumUser ? (
+            <View style={styles.settingRow}>
+              <View style={[styles.settingIcon, { backgroundColor: '#b8860b22' }]}>
+                <Text style={{ fontSize: 16 }}>👑</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[typography.label, { color: colors.onSurface }]}>Premium Active</Text>
+                <Text style={[typography.body, { fontSize: 12, color: colors.outline }]}>All features unlocked</Text>
+              </View>
+              <MaterialIcons name="check-circle" size={20} color={colors.primary} />
+            </View>
+          ) : (
+            <Pressable
+              style={styles.settingRow}
+              onPress={() => router.push('/premium' as never)}
+            >
+              <View style={[styles.settingIcon, { backgroundColor: colors.primarySoft }]}>
+                <Text style={{ fontSize: 16 }}>👑</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[typography.label, { color: colors.primary }]}>Upgrade to Premium</Text>
+                <Text style={[typography.body, { fontSize: 12, color: colors.outline }]}>Unlimited analyses · all quizzes · games</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={20} color={colors.primary} />
+            </Pressable>
+          )}
+          <View style={[styles.divider, { backgroundColor: colors.outlineVariant }]} />
+          <SettingRow
+            icon="card-giftcard"
+            label="Redeem Promo Code"
+            onPress={async () => {
+              if (Platform.OS === 'ios') {
+                // Native iOS code redemption sheet
+                await Purchases.presentCodeRedemptionSheet();
+                await refreshPremium();
+              } else {
+                // Android: show alert with instructions — Play Store handles codes in-store
+                Alert.alert(
+                  'Redeem Promo Code',
+                  'On Android, promo codes are redeemed through the Google Play Store.\n\n1. Open Google Play Store\n2. Tap your profile icon\n3. Go to Payments & subscriptions → Redeem gift code',
+                  [{ text: 'OK' }]
+                );
+              }
+            }}
+            colors={colors}
+          />
         </View>
 
         {/* Preferences section */}
@@ -367,6 +422,10 @@ const styles = StyleSheet.create({
   settingRow: {
     flexDirection: 'row', alignItems: 'center',
     gap: spacing.md, padding: spacing.md,
+  },
+  settingIcon: {
+    width: 36, height: 36, borderRadius: radius.md,
+    alignItems: 'center', justifyContent: 'center',
   },
   divider: { height: StyleSheet.hairlineWidth, marginLeft: spacing.md + 20 + spacing.md },
   modalBackdrop: {
