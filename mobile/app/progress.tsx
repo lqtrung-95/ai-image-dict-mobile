@@ -118,8 +118,8 @@ export default function ProgressScreen() {
           />
         }
       >
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg }}>
-          <Text style={[typography.headlineLg, { color: colors.onSurface }]}>Mastery Overview</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg, gap: spacing.md }}>
+          <Text style={[typography.headlineLg, { color: colors.onSurface, flex: 1 }]}>Mastery Overview</Text>
           <Pressable
             style={[styles.leaderboardBtn, { backgroundColor: colors.primarySoft }]}
             onPress={() => router.push('/leaderboard' as never)}

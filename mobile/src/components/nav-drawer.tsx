@@ -26,6 +26,7 @@ const NAV_ITEMS: NavItem[] = [
   { icon: 'auto-stories', label: 'Photo Stories', route: '/stories' },
   { icon: 'folder', label: 'Personal Lists', route: '/lists' },
   { icon: 'bar-chart', label: 'Progress', route: '/progress' },
+  { icon: 'leaderboard', label: 'Leaderboard', route: '/leaderboard' },
   { icon: 'school', label: 'Courses', route: '/courses' },
   { icon: 'file-download', label: 'Import Words', route: '/import-vocabulary' },
 ];
