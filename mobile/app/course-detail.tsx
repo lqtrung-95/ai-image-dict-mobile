@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, FlatList, Pressable, StyleSheet, ActivityIndicator,
-  TextInput, ListRenderItemInfo,
+  TextInput, ListRenderItemInfo, Modal,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { speakChinese } from '../src/lib/tts-speech-service';
@@ -40,6 +40,10 @@ export default function CourseDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [filter, setFilter] = useState<WordFilter>('all');
+
+  // Unsubscribe confirmation dialog
+  const [showUnsubDialog, setShowUnsubDialog] = useState(false);
+  const [removeWords, setRemoveWords] = useState(false);
 
   // Word list state
   const [wordsPage, setWordsPage] = useState<WordsPage | null>(null);
@@ -143,17 +147,30 @@ export default function CourseDetailScreen() {
 
   const toggleSubscribe = async () => {
     if (!detail) return;
-    setBusy(true);
     const wasSubscribed = detail.isSubscribed ?? detail.course.isSubscribed ?? false;
+    if (wasSubscribed) {
+      // Show confirmation dialog instead of unsubscribing immediately
+      setRemoveWords(false);
+      setShowUnsubDialog(true);
+      return;
+    }
+    setBusy(true);
     try {
-      if (wasSubscribed) {
-        await unsubscribeFromCourse(id);
-        await loadCourse(search);
-      } else {
-        await subscribeToCourse(id);
-        // Navigate straight to flashcards — user clicked "Enroll & start learning"
-        router.push({ pathname: '/practice-flashcards', params: { course: id, title: encodeURIComponent(detail?.course.name ?? 'Course') } });
-      }
+      await subscribeToCourse(id);
+      router.push({ pathname: '/practice-flashcards', params: { course: id, title: encodeURIComponent(detail?.course.name ?? 'Course') } });
+    } catch (err) {
+      showError('Action failed', err instanceof Error ? err.message : 'Try again');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmUnsubscribe = async () => {
+    setShowUnsubDialog(false);
+    setBusy(true);
+    try {
+      await unsubscribeFromCourse(id, removeWords);
+      await loadCourse(search);
     } catch (err) {
       showError('Action failed', err instanceof Error ? err.message : 'Try again');
     } finally {
@@ -417,6 +434,52 @@ export default function CourseDetailScreen() {
         onCancel={() => setPickerWord(null)}
         onListCreated={(list) => setLists((prev) => [list, ...prev])}
       />
+
+      {/* Unsubscribe confirmation dialog */}
+      <Modal visible={showUnsubDialog} transparent animationType="fade" onRequestClose={() => setShowUnsubDialog(false)}>
+        <View style={styles.overlay}>
+          <View style={[styles.dialog, { backgroundColor: colors.surface, borderColor: colors.outlineVariant }]}>
+            <Text style={[typography.heading, { color: colors.onSurface, marginBottom: spacing.sm }]}>
+              Unsubscribe from course?
+            </Text>
+            <Text style={[typography.body, { color: colors.onSurfaceVariant, marginBottom: spacing.lg, lineHeight: 22 }]}>
+              Your SRS progress for this course will be removed.
+            </Text>
+
+            {/* Checkbox row */}
+            <Pressable
+              style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xl }}
+              onPress={() => setRemoveWords((v) => !v)}
+            >
+              <View style={[
+                styles.checkbox,
+                { borderColor: removeWords ? colors.primary : colors.outlineVariant },
+                removeWords && { backgroundColor: colors.primary },
+              ]}>
+                {removeWords && <Text style={{ color: colors.onPrimary, fontSize: 11, fontWeight: '700' }}>✓</Text>}
+              </View>
+              <Text style={[typography.body, { color: colors.onSurface, flex: 1 }]}>
+                Also remove this course's words from my library
+              </Text>
+            </Pressable>
+
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              <Pressable
+                style={[styles.dialogBtn, { flex: 1, borderWidth: 1, borderColor: colors.outlineVariant, backgroundColor: colors.surface }]}
+                onPress={() => setShowUnsubDialog(false)}
+              >
+                <Text style={[typography.label, { color: colors.onSurface }]}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.dialogBtn, { flex: 1, backgroundColor: colors.error }]}
+                onPress={confirmUnsubscribe}
+              >
+                <Text style={[typography.label, { color: colors.onError ?? '#fff' }]}>Unsubscribe</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -434,4 +497,8 @@ const styles = StyleSheet.create({
   wordIndex: { fontSize: 11, width: 22, textAlign: 'right', flexShrink: 0 },
   stateDot: { width: 9, height: 9, borderRadius: 5, flexShrink: 0 },
   loadMore: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16 },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
+  dialog: { width: '100%', borderRadius: radius.xl, padding: spacing.xl, borderWidth: 1 },
+  checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  dialogBtn: { borderRadius: radius.md, paddingVertical: 12, alignItems: 'center' },
 });

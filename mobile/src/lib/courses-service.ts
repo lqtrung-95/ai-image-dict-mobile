@@ -80,8 +80,9 @@ export async function subscribeToCourse(id: string): Promise<void> {
   }
 }
 
-export async function unsubscribeFromCourse(id: string): Promise<void> {
-  const res = await apiFetch(`/api/courses/${id}/subscribe`, { method: 'DELETE' });
+export async function unsubscribeFromCourse(id: string, removeWords = false): Promise<void> {
+  const url = `/api/courses/${id}/subscribe${removeWords ? '?removeWords=true' : ''}`;
+  const res = await apiFetch(url, { method: 'DELETE' });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(data.error ?? 'Failed to unsubscribe');
