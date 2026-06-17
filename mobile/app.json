@@ -6,6 +6,11 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#131313"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.lqtrung95.snapmandarin",
@@ -13,6 +18,7 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Snap Mandarin uses your camera to photograph objects so it can detect them and teach you the Chinese words for what's in the scene.",
         "NSPhotoLibraryUsageDescription": "Snap Mandarin needs access to your photos so you can analyze an existing picture and set a profile avatar.",
+        "NSMicrophoneUsageDescription": "Snap Mandarin uses the microphone to play back Chinese pronunciation using text-to-speech audio.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -26,9 +32,9 @@
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "CAMERA",
-        "READ_MEDIA_IMAGES",
-        "POST_NOTIFICATIONS",
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.POST_NOTIFICATIONS",
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS"
       ]
@@ -41,6 +47,7 @@
       "expo-secure-store",
       "expo-web-browser",
       "expo-audio",
+      "expo-splash-screen",
       "expo-notifications",
       "expo-font",
       "expo-image-picker"
@@ -52,6 +59,12 @@
         "projectId": "47b50771-6df8-431d-944a-cd2aa80659af"
       }
     },
-    "owner": "lqtrung.dev"
+    "owner": "lqtrung.dev",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/47b50771-6df8-431d-944a-cd2aa80659af"
+    }
   }
 }
