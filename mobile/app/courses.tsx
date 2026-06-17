@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { View, Text, TextInput, FlatList, Pressable, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useAuth } from '../src/lib/auth-context';
 import { fetchCourses, Course, CourseSort } from '../src/lib/courses-service';
 import { useTheme } from '../src/theme/theme-context';
@@ -34,10 +34,10 @@ export default function CoursesScreen() {
     } catch { /* keep prior */ } finally { setLoading(false); }
   }, [page, difficulty, sort, search]);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     const timer = setTimeout(load, search ? 350 : 0);
     return () => clearTimeout(timer);
-  }, [load, search]);
+  }, [load, search]));
 
   const chipStyle = (active: boolean) => ({
     backgroundColor: active ? colors.primarySoft : colors.surface,
