@@ -111,6 +111,7 @@ export async function saveWordToVocabulary(word: DetectedWord, listId?: string):
       wordZh: word.zh,
       wordPinyin: word.pinyin,
       wordEn: word.en,
+      detectedObjectId: word.id,
       exampleSentence: word.example?.zh ?? undefined,
       exampleSentencePinyin: word.example?.pinyin ?? undefined,
       exampleSentenceEn: word.example?.en ?? undefined,
