@@ -4,8 +4,7 @@ import { showError } from '../../src/lib/toast';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import * as WebBrowser from 'expo-web-browser';
-import { Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import Purchases from 'react-native-purchases';
 import { useAuth } from '../../src/lib/auth-context';
 import { usePremium } from '../../src/lib/premium-context';
@@ -284,7 +283,7 @@ export default function ProfileScreen() {
           <SettingRow
             icon="privacy-tip"
             label="Privacy Policy"
-            onPress={() => WebBrowser.openBrowserAsync(`${process.env.EXPO_PUBLIC_API_URL}/privacy`)}
+            onPress={() => Linking.openURL(`${process.env.EXPO_PUBLIC_API_URL}/privacy`)}
             colors={colors}
           />
         </View>
