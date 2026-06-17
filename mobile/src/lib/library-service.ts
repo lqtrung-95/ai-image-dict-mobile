@@ -83,6 +83,7 @@ export interface PhotoStory {
   cover_image_url?: string | null;
   created_at: string;
   photoCount: number;
+  generated_content?: StoryNarrative | null;
 }
 
 export async function fetchStories(): Promise<PhotoStory[]> {

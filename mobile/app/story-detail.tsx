@@ -49,7 +49,7 @@ export default function StoryDetailScreen() {
         {story.photos.length} photos · {story.vocabularyCount} unique words
       </Text>
 
-      <StoryNarrativeSection storyId={id} />
+      <StoryNarrativeSection storyId={id} savedNarrative={story.generated_content} />
 
       {story.photos.map((photo, i) => (
         <View key={photo.story_photo_id} style={{ marginBottom: spacing.sm }}>

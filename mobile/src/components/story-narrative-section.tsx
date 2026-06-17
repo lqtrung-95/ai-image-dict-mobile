@@ -8,9 +8,11 @@ import { Eyebrow, Icon } from '../theme/ui-primitives';
 
 // "✨ AI Story" block: generates a short Chinese narrative from the story's
 // vocabulary, sentence-by-sentence with pinyin, translation, and tap-to-listen.
-export function StoryNarrativeSection({ storyId }: { storyId: string }) {
+// Pass `savedNarrative` if the story already has a persisted narrative — it will
+// be shown immediately without triggering a generation request.
+export function StoryNarrativeSection({ storyId, savedNarrative }: { storyId: string; savedNarrative?: StoryNarrative | null }) {
   const { colors } = useTheme();
-  const [narrative, setNarrative] = useState<StoryNarrative | null>(null);
+  const [narrative, setNarrative] = useState<StoryNarrative | null>(savedNarrative ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showTranslations, setShowTranslations] = useState(true);
