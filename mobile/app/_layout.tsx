@@ -92,6 +92,7 @@ function RootNavigator() {
           <Stack.Screen name="notification-settings" options={{ headerShown: false }} />
           <Stack.Screen name="premium" options={{ headerShown: false }} />
           <Stack.Screen name="leaderboard" options={{ headerShown: false }} />
+          <Stack.Screen name="privacy-policy" options={{ headerShown: false }} />
         </Stack>
         {/* NavDrawer must render after Stack so it sits on top in z-order */}
         <NavDrawer />
