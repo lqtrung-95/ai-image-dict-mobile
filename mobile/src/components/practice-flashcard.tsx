@@ -1,4 +1,4 @@
-import { Text, Pressable, View, StyleSheet } from 'react-native';
+import { Text, Pressable, View, Image, StyleSheet } from 'react-native';
 import { speakChinese } from '../lib/tts-speech-service';
 import { tapLight, tapSelection } from '../lib/haptics-service';
 import type { DueWord, SrsRating } from '../lib/practice-service';
@@ -36,12 +36,31 @@ export function PracticeFlashcard({ word, flipped, onFlip, onRate }: Props) {
 
         {flipped ? (
           <View style={{ alignItems: 'center', marginTop: spacing.md }}>
+            {word.photoUrl ? (
+              <Image
+                source={{ uri: word.photoUrl }}
+                style={styles.photo}
+                resizeMode="cover"
+              />
+            ) : null}
             <Text style={{ fontFamily: fonts.bodyMedium, fontSize: 22, color: colors.primary }}>{word.wordPinyin}</Text>
             <Text style={[typography.heading, { color: colors.onSurface, marginTop: spacing.xs }]}>{word.wordEn}</Text>
             {word.exampleSentence ? (
-              <Text style={[typography.body, { color: colors.onSurfaceVariant, fontStyle: 'italic', marginTop: spacing.md, textAlign: 'center' }]}>
-                {word.exampleSentence}
-              </Text>
+              <View style={{ marginTop: spacing.md, alignItems: 'center' }}>
+                <Text style={[typography.body, { color: colors.onSurfaceVariant, fontStyle: 'italic', textAlign: 'center' }]}>
+                  {word.exampleSentence}
+                </Text>
+                {word.exampleSentencePinyin ? (
+                  <Text style={[typography.pinyin, { color: colors.primary, marginTop: 4, textAlign: 'center' }]}>
+                    {word.exampleSentencePinyin}
+                  </Text>
+                ) : null}
+                {word.exampleSentenceEn ? (
+                  <Text style={[typography.pinyin, { color: colors.outline, marginTop: 2, textAlign: 'center' }]}>
+                    {word.exampleSentenceEn}
+                  </Text>
+                ) : null}
+              </View>
             ) : null}
           </View>
         ) : (
@@ -68,6 +87,7 @@ export function PracticeFlashcard({ word, flipped, onFlip, onRate }: Props) {
 
 const styles = StyleSheet.create({
   card: { borderRadius: radius.xl, padding: spacing.xl, minHeight: 320, justifyContent: 'center', alignItems: 'center', borderWidth: 1 },
+  photo: { width: 140, height: 100, borderRadius: radius.md, marginBottom: spacing.md },
   zh: { fontFamily: fonts.hanzi, fontSize: 72, textAlign: 'center' },
   ratingRow: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.lg },
   ratingBtn: { flex: 1, borderWidth: 1.5, borderRadius: radius.md, paddingVertical: 14, alignItems: 'center' },

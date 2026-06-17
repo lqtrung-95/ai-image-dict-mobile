@@ -7,9 +7,12 @@ export interface DueWord {
   wordPinyin: string;
   wordEn: string;
   exampleSentence?: string | null;
+  exampleSentencePinyin?: string | null;
+  exampleSentenceEn?: string | null;
   hskLevel?: number | null;
   repetitions?: number;
   intervalDays?: number;
+  photoUrl?: string | null;
 }
 
 export interface DueWordsResponse {

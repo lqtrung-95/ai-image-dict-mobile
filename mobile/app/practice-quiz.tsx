@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, TextInput, StyleSheet, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../src/lib/auth-context';
+import { usePremium } from '../src/lib/premium-context';
 import { LoginRequiredPrompt } from '../src/components/login-required-prompt';
 import { PracticeStatusView } from '../src/components/practice-status-view';
 import { AppHeader } from '../src/components/app-header';
@@ -26,6 +27,7 @@ const MODES: { mode: QuizMode; icon: IconName; title: string; desc: string }[] =
 
 export default function QuizScreen() {
   const { user } = useAuth();
+  const { isPremiumUser } = usePremium();
   const { colors } = useTheme();
   const params = useLocalSearchParams<{ mode?: string }>();
   const [phase, setPhase] = useState<Phase>('menu');
@@ -52,6 +54,9 @@ export default function QuizScreen() {
 
   if (!user) {
     return <LoginRequiredPrompt message="Log in to take vocabulary quizzes." />;
+  }
+  if (!isPremiumUser) {
+    return <LoginRequiredPrompt message="Upgrade to Premium to unlock all quiz modes." actionLabel="View Premium" actionRoute="/premium" />;
   }
 
   const start = async (selectedMode: QuizMode) => {

@@ -152,7 +152,7 @@ export default function CourseDetailScreen() {
       } else {
         await subscribeToCourse(id);
         // Navigate straight to flashcards — user clicked "Enroll & start learning"
-        router.push({ pathname: '/practice-flashcards', params: { course: id } });
+        router.push({ pathname: '/practice-flashcards', params: { course: id, title: encodeURIComponent(detail?.course.name ?? 'Course') } });
       }
     } catch (err) {
       showError('Action failed', err instanceof Error ? err.message : 'Try again');
@@ -170,7 +170,10 @@ export default function CourseDetailScreen() {
     }
   };
 
-  const startStudy = () => router.push({ pathname: '/practice-flashcards', params: { course: id } });
+  const startStudy = () => router.push({
+    pathname: '/practice-flashcards',
+    params: { course: id, title: encodeURIComponent(detail?.course.name ?? 'Course') },
+  });
 
   // Apply filter client-side on loaded words (filter only applies to loaded pages)
   const filtered = filter === 'all' ? allWords : allWords.filter((w) => (w.state ?? 'new') === filter);

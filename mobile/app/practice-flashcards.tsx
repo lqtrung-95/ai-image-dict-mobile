@@ -15,7 +15,8 @@ type SessionState = 'loading' | 'empty' | 'practicing' | 'done' | 'error';
 
 export default function PracticeScreen() {
   const { user } = useAuth();
-  const { course: courseId } = useLocalSearchParams<{ course?: string }>();
+  const { course: courseId, title: titleParam } = useLocalSearchParams<{ course?: string; title?: string }>();
+  const headerTitle = titleParam ? decodeURIComponent(titleParam) : 'Flashcards';
   const { colors } = useTheme();
   const [state, setState] = useState<SessionState>('loading');
   const [words, setWords] = useState<DueWord[]>([]);
@@ -73,7 +74,7 @@ export default function PracticeScreen() {
   if (state === 'loading') {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <AppHeader title="Flashcards" showBack />
+        <AppHeader title={headerTitle} showBack />
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -84,7 +85,7 @@ export default function PracticeScreen() {
   if (state === 'error') {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <AppHeader title="Flashcards" showBack />
+        <AppHeader title={headerTitle} showBack />
         <PracticeStatusView icon="error-outline" title="Couldn't load words" subtitle="Please try again." actionLabel="Retry" onAction={startSession} />
       </View>
     );
@@ -93,8 +94,8 @@ export default function PracticeScreen() {
   if (state === 'empty') {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <AppHeader title="Flashcards" showBack />
-        <PracticeStatusView icon="celebration" title="All caught up!" subtitle="No words due for review. Capture more photos or come back later." />
+        <AppHeader title={headerTitle} showBack />
+        <PracticeStatusView icon="celebration" title="All caught up!" subtitle={courseId ? "No words from this course are due for review yet." : "No words due for review. Capture more photos or come back later."} />
       </View>
     );
   }
@@ -103,7 +104,7 @@ export default function PracticeScreen() {
     const total = results.again + results.correct;
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <AppHeader title="Flashcards" showBack />
+        <AppHeader title={headerTitle} showBack />
         <PracticeStatusView
           icon="check-circle"
           title="Session complete!"
@@ -117,7 +118,7 @@ export default function PracticeScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <AppHeader title="Flashcards" showBack />
+      <AppHeader title={headerTitle} showBack />
       <View style={{ flex: 1, padding: spacing.containerMargin }}>
       <View style={styles.progressRow}>
         <Text style={[typography.label, { fontSize: 14, color: colors.onSurfaceVariant }]}>

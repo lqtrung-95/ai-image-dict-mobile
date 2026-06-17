@@ -43,12 +43,7 @@
       "expo-audio",
       "expo-notifications",
       "expo-font",
-      [
-        "react-native-purchases",
-        {
-          "androidPackage": "com.lqtrung95.snapmandarin"
-        }
-      ]
+      "expo-image-picker"
     ],
     "scheme": "aiimagedict",
     "extra": {

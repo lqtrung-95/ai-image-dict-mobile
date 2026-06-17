@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../src/lib/auth-context';
+import { usePremium } from '../src/lib/premium-context';
 import { LoginRequiredPrompt } from '../src/components/login-required-prompt';
 import { PracticeStatusView } from '../src/components/practice-status-view';
 import { AppHeader } from '../src/components/app-header';
@@ -20,6 +21,7 @@ const RAPID_SECONDS = 30;
 
 export default function GamesScreen() {
   const { user } = useAuth();
+  const { isPremiumUser } = usePremium();
   const { colors } = useTheme();
   const params = useLocalSearchParams<{ game?: string }>();
   const [game, setGame] = useState<Game>('menu');
@@ -50,6 +52,9 @@ export default function GamesScreen() {
 
   if (!user) {
     return <LoginRequiredPrompt message="Log in to play vocabulary games." />;
+  }
+  if (!isPremiumUser) {
+    return <LoginRequiredPrompt message="Upgrade to Premium to unlock all mini games." actionLabel="View Premium" actionRoute="/premium" />;
   }
 
   const launch = async (target: 'matching' | 'rapid') => {
