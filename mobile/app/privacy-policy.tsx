@@ -19,10 +19,10 @@ function Body({ children }: { children: string }) {
 function Bullet({ label, children }: { label: string; children: string }) {
   const { colors } = useTheme();
   return (
-    <View style={styles.bulletRow}>
-      <Text style={[styles.bulletLabel, { color: colors.onSurface }]}>{label + ' '}</Text>
-      <Text style={[styles.bulletText, { color: colors.onSurfaceVariant }]}>{children}</Text>
-    </View>
+    <Text style={[styles.bulletRow, { color: colors.onSurfaceVariant }]}>
+      <Text style={{ fontWeight: '700', color: colors.onSurface }}>{label} </Text>
+      {children}
+    </Text>
   );
 }
 
@@ -107,7 +107,5 @@ const styles = StyleSheet.create({
   content: { padding: spacing.containerMargin },
   sectionTitle: { fontSize: 16, fontWeight: '700', marginTop: spacing.lg, marginBottom: spacing.xs },
   body: { fontSize: 14, lineHeight: 22, marginBottom: spacing.sm },
-  bulletRow: { flexDirection: 'row', marginBottom: spacing.sm, paddingLeft: spacing.sm },
-  bulletLabel: { fontSize: 14, fontWeight: '700', flexShrink: 0 },
-  bulletText: { fontSize: 14, lineHeight: 22, flex: 1 },
+  bulletRow: { fontSize: 14, lineHeight: 22, marginBottom: spacing.sm },
 });
