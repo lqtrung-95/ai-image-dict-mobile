@@ -17,7 +17,15 @@ function AnalyzingOverlay({ uri, visible }: { uri: string | null; visible: boole
   const scanY = useRef(new Animated.Value(0)).current;
   const pulse = useRef(new Animated.Value(0.6)).current;
 
+  // Start animations only when overlay becomes visible — resetting to position 0
+  // each time so the scan line always begins at the top. Running them while
+  // invisible causes native-thread/JS-thread timing drift on slower devices.
   useEffect(() => {
+    if (!visible) {
+      scanY.setValue(0);
+      pulse.setValue(0.6);
+      return;
+    }
     const scan = Animated.loop(
       Animated.sequence([
         Animated.timing(scanY, { toValue: 1, duration: 1800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
@@ -33,7 +41,7 @@ function AnalyzingOverlay({ uri, visible }: { uri: string | null; visible: boole
     scan.start();
     badge.start();
     return () => { scan.stop(); badge.stop(); };
-  }, [scanY, pulse]);
+  }, [visible, scanY, pulse]);
 
   const CARD = 300;
   const scanTranslate = scanY.interpolate({ inputRange: [0, 1], outputRange: [0, CARD - 2] });
