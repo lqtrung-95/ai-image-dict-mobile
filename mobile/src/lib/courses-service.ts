@@ -68,7 +68,8 @@ export async function fetchCourseDetail(id: string, url?: string): Promise<Cours
   const res = await apiFetch(url ?? `/api/courses/${id}`);
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? 'Failed to load course');
-  return data;
+  // API returns `subscription` (raw row or null); map to boolean for the UI
+  return { ...data, isSubscribed: data.subscription != null };
 }
 
 export async function subscribeToCourse(id: string): Promise<void> {
