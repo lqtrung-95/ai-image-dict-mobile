@@ -141,9 +141,15 @@ export interface NarrativeSentence {
   en: string;
 }
 
+export interface CulturalNote {
+  term: string;
+  note: string;
+}
+
 export interface StoryNarrative {
   sentences: NarrativeSentence[];
   wordsUsed: string[];
+  culturalNotes: CulturalNote[];
 }
 
 // AI writes a short Chinese story weaving in the story photos' vocabulary.

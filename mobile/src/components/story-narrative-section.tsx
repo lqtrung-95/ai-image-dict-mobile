@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { speakChinese } from '../lib/tts-speech-service';
-import { generateNarrative, StoryNarrative } from '../lib/library-service';
+import { generateNarrative, StoryNarrative, CulturalNote } from '../lib/library-service';
 import { useTheme } from '../theme/theme-context';
 import { spacing, radius, typography, fonts } from '../theme/theme';
-import { Icon } from '../theme/ui-primitives';
+import { Eyebrow, Icon } from '../theme/ui-primitives';
 
 // "✨ AI Story" block: generates a short Chinese narrative from the story's
 // vocabulary, sentence-by-sentence with pinyin, translation, and tap-to-listen.
@@ -75,6 +75,18 @@ export function StoryNarrativeSection({ storyId }: { storyId: string }) {
         </Text>
       )}
 
+      {narrative.culturalNotes?.length > 0 && (
+        <View style={[styles.notesBox, { backgroundColor: colors.surface, borderColor: colors.outlineVariant }]}>
+          <Eyebrow style={{ marginBottom: spacing.sm }}>Cultural Notes</Eyebrow>
+          {narrative.culturalNotes.map((n: CulturalNote, i: number) => (
+            <View key={i} style={i > 0 ? { marginTop: spacing.sm } : undefined}>
+              <Text style={[typography.label, { fontSize: 13, color: colors.primary }]}>{n.term}</Text>
+              <Text style={[typography.body, { fontSize: 13, color: colors.onSurfaceVariant, marginTop: 2, lineHeight: 19 }]}>{n.note}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
       <Pressable style={{ marginTop: spacing.md, padding: spacing.sm }} onPress={generate} disabled={loading}>
         <Text style={[typography.label, { fontSize: 13, color: colors.primary, textAlign: 'center' }]}>{loading ? 'Writing…' : '↻ Write a different story'}</Text>
       </Pressable>
@@ -87,4 +99,5 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
   genBtn: { borderRadius: radius.md, padding: 14, alignItems: 'center' },
+  notesBox: { marginTop: spacing.md, borderWidth: 1, borderRadius: radius.md, padding: spacing.md },
 });
