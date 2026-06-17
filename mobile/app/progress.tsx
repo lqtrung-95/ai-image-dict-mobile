@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { View, Text, Pressable, ScrollView, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { fetchStats, fetchWordsByState, UserStats, WordsByState } from '../src/lib/stats-service';
 import { StatsBarChart } from '../src/components/stats-bar-chart';
 import { AppHeader } from '../src/components/app-header';
@@ -65,6 +65,7 @@ function buildAchievements(stats: UserStats, wordsByState: WordsByState | null):
 
 export default function ProgressScreen() {
   const { colors } = useTheme();
+  const router = useRouter();
   const [stats, setStats] = useState<UserStats | null>(null);
   const [wordsByState, setWordsByState] = useState<WordsByState | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -117,9 +118,16 @@ export default function ProgressScreen() {
           />
         }
       >
-        <Text style={[typography.headlineLg, { color: colors.onSurface, marginBottom: spacing.lg }]}>
-          Mastery Overview
-        </Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg }}>
+          <Text style={[typography.headlineLg, { color: colors.onSurface }]}>Mastery Overview</Text>
+          <Pressable
+            style={[styles.leaderboardBtn, { backgroundColor: colors.primarySoft }]}
+            onPress={() => router.push('/leaderboard' as never)}
+          >
+            <Text style={{ fontSize: 14 }}>🏆</Text>
+            <Text style={[typography.label, { fontSize: 12, color: colors.primary }]}>Rankings</Text>
+          </Pressable>
+        </View>
 
         {/* Stat chips row */}
         <View style={styles.chipRow}>
@@ -230,6 +238,7 @@ export default function ProgressScreen() {
 const styles = StyleSheet.create({
   content: { padding: spacing.containerMargin, paddingBottom: 120 },
   chipRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
+  leaderboardBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 7 },
   chip: {
     flex: 1, borderRadius: radius.lg, padding: spacing.sm,
     alignItems: 'center', gap: 3,
