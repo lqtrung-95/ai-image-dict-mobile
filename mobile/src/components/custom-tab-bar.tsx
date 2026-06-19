@@ -3,23 +3,24 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useTheme } from '../theme/theme-context';
+import { useLocale } from '../lib/locale-react-context';
 import { spacing, radius, typography, makeShadow } from '../theme/theme';
 
 type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
 
-// "capture" renders as a raised center FAB (the app's primary action),
-// matching the Stitch bottom-nav design.
-const TAB_META: Record<string, { icon: IconName; label: string }> = {
-  index: { icon: 'home', label: 'Home' },
-  vocabulary: { icon: 'menu-book', label: 'Library' },
-  capture: { icon: 'photo-camera', label: 'Capture' },
-  practice: { icon: 'school', label: 'Practice' },
-  profile: { icon: 'person', label: 'Profile' },
-};
-
 export function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
+  const { t } = useLocale();
+
+  // Built inside the component so labels re-render on locale change
+  const TAB_META: Record<string, { icon: IconName; label: string }> = {
+    index: { icon: 'home', label: t('nav.home') },
+    vocabulary: { icon: 'menu-book', label: t('nav.library') },
+    capture: { icon: 'photo-camera', label: t('nav.capture') },
+    practice: { icon: 'school', label: t('nav.practice') },
+    profile: { icon: 'person', label: t('nav.profile') },
+  };
 
   return (
     <View style={{ backgroundColor: colors.surface, paddingBottom: insets.bottom || spacing.md }}>

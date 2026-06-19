@@ -9,6 +9,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme/theme-context';
 import { useAuth } from '../lib/auth-context';
 import { useDrawer } from '../lib/drawer-context';
+import { useLocale } from '../lib/locale-react-context';
 import { spacing, radius, typography, fonts } from '../theme/theme';
 
 const DRAWER_WIDTH = Dimensions.get('window').width * 0.78;
@@ -17,24 +18,25 @@ type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
 
 interface NavItem {
   icon: IconName;
-  label: string;
+  labelKey: string;
   route: string;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { icon: 'history', label: 'Analysis History', route: '/history' },
-  { icon: 'auto-stories', label: 'Photo Stories', route: '/stories' },
-  { icon: 'folder', label: 'Personal Lists', route: '/lists' },
-  { icon: 'bar-chart', label: 'Progress', route: '/progress' },
-  { icon: 'leaderboard', label: 'Leaderboard', route: '/leaderboard' },
-  { icon: 'school', label: 'Courses', route: '/courses' },
-  { icon: 'file-download', label: 'Import Words', route: '/import-vocabulary' },
+const NAV_ITEM_DEFS: NavItem[] = [
+  { icon: 'history', labelKey: 'nav.analysisHistory', route: '/history' },
+  { icon: 'auto-stories', labelKey: 'nav.photoStories', route: '/stories' },
+  { icon: 'folder', labelKey: 'nav.personalLists', route: '/lists' },
+  { icon: 'bar-chart', labelKey: 'nav.progress', route: '/progress' },
+  { icon: 'leaderboard', labelKey: 'nav.leaderboard', route: '/leaderboard' },
+  { icon: 'school', labelKey: 'nav.courses', route: '/courses' },
+  { icon: 'file-download', labelKey: 'nav.importWords', route: '/import-vocabulary' },
 ];
 
 export function NavDrawer() {
   const { colors } = useTheme();
   const { user, logout } = useAuth();
   const { isOpen, closeDrawer } = useDrawer();
+  const { t } = useLocale();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const translateX = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
@@ -115,7 +117,7 @@ export function NavDrawer() {
 
           {/* Nav items */}
           <View style={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm }}>
-            {NAV_ITEMS.map((item) => (
+            {NAV_ITEM_DEFS.map((item) => (
               <Pressable
                 key={item.route}
                 style={({ pressed }) => [
@@ -127,7 +129,7 @@ export function NavDrawer() {
               >
                 <MaterialIcons name={item.icon} size={22} color={colors.primary} />
                 <Text style={[typography.body, { color: colors.onSurface, fontFamily: fonts.bodyMedium }]}>
-                  {item.label}
+                  {t(item.labelKey)}
                 </Text>
               </Pressable>
             ))}
@@ -145,7 +147,7 @@ export function NavDrawer() {
             onPress={async () => { closeDrawer(); await logout(); }}
           >
             <MaterialIcons name="logout" size={20} color={colors.error} />
-            <Text style={[typography.label, { color: colors.error, fontSize: 14 }]}>Sign Out</Text>
+            <Text style={[typography.label, { color: colors.error, fontSize: 14 }]}>{t('nav.signOut')}</Text>
           </Pressable>
         )}
       </Animated.View>

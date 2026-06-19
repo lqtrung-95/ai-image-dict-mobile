@@ -39,11 +39,10 @@ function StatCardSkeleton() {
   );
 }
 
-// Compute highest HSK level from distribution
-function computeHskBadge(dist: Record<string, number>): string | null {
-  const levels = ['hsk6', 'hsk5', 'hsk4', 'hsk3', 'hsk2', 'hsk1'];
-  for (const l of levels) {
-    if ((dist[l] ?? 0) > 0) return l.replace('hsk', 'HSK ') + ' Learner';
+// Returns the highest HSK level number the user has words in, or null
+function computeHskLevel(dist: Record<string, number>): number | null {
+  for (let i = 6; i >= 1; i--) {
+    if ((dist[`hsk${i}`] ?? 0) > 0) return i;
   }
   return null;
 }
@@ -142,7 +141,7 @@ export default function ProfileScreen() {
     ]);
   };
 
-  const hskBadge = stats ? computeHskBadge(stats.hskDistribution ?? {}) : null;
+  const hskLevel = stats ? computeHskLevel(stats.hskDistribution ?? {}) : null;
   const themeLabel = mode === 'light' ? t('profile.themeLight') : mode === 'dark' ? t('profile.themeDark') : t('profile.themeSystem');
 
   return (
@@ -173,14 +172,14 @@ export default function ProfileScreen() {
           </Pressable>
 
           <View style={styles.badgeRow}>
-            {hskBadge && (
+            {hskLevel !== null && (
               <View style={[styles.badge, { backgroundColor: colors.primaryContainer }]}>
-                <Text style={[typography.label, { fontSize: 11, color: colors.onPrimaryContainer }]}>{hskBadge}</Text>
+                <Text style={[typography.label, { fontSize: 11, color: colors.onPrimaryContainer }]}>{t('profile.hskBadge', { level: hskLevel })}</Text>
               </View>
             )}
             {stats && stats.learnedWords >= 5 && (
               <View style={[styles.badge, { backgroundColor: colors.primaryContainer }]}>
-                <Text style={[typography.label, { fontSize: 11, color: colors.onPrimaryContainer }]}>Calligrapher</Text>
+                <Text style={[typography.label, { fontSize: 11, color: colors.onPrimaryContainer }]}>{t('profile.calligrapherBadge')}</Text>
               </View>
             )}
           </View>
