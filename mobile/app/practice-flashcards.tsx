@@ -44,11 +44,11 @@ export default function PracticeScreen() {
     } catch {
       setState('error');
     }
-  }, [courseId]);
+  }, [courseId, locale]);
 
   useEffect(() => {
     if (user) startSession();
-  }, [user, startSession, courseId]);
+  }, [user, startSession, courseId, locale]);
 
   if (!user) {
     return <LoginRequiredPrompt message={t('flashcards.loginPrompt')} />;
