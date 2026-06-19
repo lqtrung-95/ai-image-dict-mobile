@@ -151,7 +151,6 @@ export default function CourseDetailScreen() {
     const wasSubscribed = detail.isSubscribed ?? detail.course.isSubscribed ?? false;
     if (wasSubscribed) {
       // Show confirmation dialog instead of unsubscribing immediately
-      setRemoveWords(false);
       setShowUnsubDialog(true);
       return;
     }
