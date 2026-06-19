@@ -9,6 +9,7 @@ import { AppHeader } from '../src/components/app-header';
 import { fetchDueWords, submitAttempt, DueWord, SrsRating } from '../src/lib/practice-service';
 import { showError } from '../src/lib/toast';
 import { useTheme } from '../src/theme/theme-context';
+import { useLocale } from '../src/lib/locale-react-context';
 import { spacing, radius, typography } from '../src/theme/theme';
 
 type SessionState = 'loading' | 'empty' | 'practicing' | 'done' | 'error';
@@ -16,8 +17,9 @@ type SessionState = 'loading' | 'empty' | 'practicing' | 'done' | 'error';
 export default function PracticeScreen() {
   const { user } = useAuth();
   const { course: courseId, title: titleParam } = useLocalSearchParams<{ course?: string; title?: string }>();
-  const headerTitle = titleParam ? decodeURIComponent(titleParam) : 'Flashcards';
   const { colors } = useTheme();
+  const { t, locale } = useLocale();
+  const headerTitle = titleParam ? decodeURIComponent(titleParam) : t('flashcards.title');
   const [state, setState] = useState<SessionState>('loading');
   const [words, setWords] = useState<DueWord[]>([]);
   const [index, setIndex] = useState(0);
@@ -31,7 +33,7 @@ export default function PracticeScreen() {
     setFlipped(false);
     setResults({ again: 0, correct: 0 });
     try {
-      const data = await fetchDueWords(20, courseId);
+      const data = await fetchDueWords(20, courseId, locale);
       if (data.items.length === 0) {
         setState('empty');
       } else {
@@ -49,7 +51,7 @@ export default function PracticeScreen() {
   }, [user, startSession, courseId]);
 
   if (!user) {
-    return <LoginRequiredPrompt message="Log in to practice with flashcards and track your learning streak." />;
+    return <LoginRequiredPrompt message={t('flashcards.loginPrompt')} />;
   }
 
   const handleRate = async (rating: SrsRating) => {
@@ -57,8 +59,10 @@ export default function PracticeScreen() {
     const responseTimeMs = Date.now() - cardShownAt.current;
     setResults((r) => (rating === 1 ? { ...r, again: r.again + 1 } : { ...r, correct: r.correct + 1 }));
 
-    // Advance immediately for snappy UX; recording happens in background
-    submitAttempt(word.id, rating, responseTimeMs).catch(() =>
+    // Advance immediately for snappy UX; recording happens in background.
+    // Course words are identified by courseProgressId — routed to separate SRS table.
+    const isCourseWord = !!word.courseProgressId;
+    submitAttempt(word.id, rating, responseTimeMs, isCourseWord).catch(() =>
       showError('Sync issue', `"${word.wordZh}" rating wasn't saved. It will appear again next session.`)
     );
 
@@ -86,7 +90,7 @@ export default function PracticeScreen() {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         <AppHeader title={headerTitle} showBack />
-        <PracticeStatusView icon="error-outline" title="Couldn't load words" subtitle="Please try again." actionLabel="Retry" onAction={startSession} />
+        <PracticeStatusView icon="error-outline" title={t('flashcards.errorTitle')} subtitle={t('flashcards.errorSub')} actionLabel={t('flashcards.retry')} onAction={startSession} />
       </View>
     );
   }
@@ -95,7 +99,7 @@ export default function PracticeScreen() {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         <AppHeader title={headerTitle} showBack />
-        <PracticeStatusView icon="celebration" title="All caught up!" subtitle={courseId ? "No words from this course are due for review yet." : "No words due for review. Capture more photos or come back later."} />
+        <PracticeStatusView icon="celebration" title={t('flashcards.allCaughtUp')} subtitle={courseId ? t('flashcards.noDueCourse') : t('flashcards.noDueGeneral')} />
       </View>
     );
   }
@@ -107,9 +111,11 @@ export default function PracticeScreen() {
         <AppHeader title={headerTitle} showBack />
         <PracticeStatusView
           icon="check-circle"
-          title="Session complete!"
-          subtitle={`${results.correct} of ${total} correct${results.again > 0 ? ` — ${results.again} to review again soon` : ' — perfect run!'}`}
-          actionLabel="Practice More"
+          title={t('flashcards.sessionDone')}
+          subtitle={results.again > 0
+            ? t('flashcards.sessionReview', { correct: results.correct, total, again: results.again })
+            : t('flashcards.sessionPerfect', { correct: results.correct, total })}
+          actionLabel={t('flashcards.practiceMore')}
           onAction={startSession}
         />
       </View>

@@ -1,8 +1,11 @@
 import { apiFetch } from './api-client';
 
-// Word due for review, returned camelCase by /api/practice/due-words
+// Word due for review, returned camelCase by /api/practice/due-words.
+// courseProgressId is set when practicing a course word — the server uses it
+// to update user_course_word_progress instead of vocabulary_items.
 export interface DueWord {
   id: string;
+  courseProgressId?: string | null; // present only for course practice words
   wordZh: string;
   wordPinyin: string;
   wordEn: string;
@@ -24,8 +27,8 @@ export interface DueWordsResponse {
 
 export type SrsRating = 1 | 2 | 3 | 4; // Again / Hard / Good / Easy
 
-export async function fetchDueWords(limit = 20, courseId?: string): Promise<DueWordsResponse> {
-  const params = new URLSearchParams({ limit: String(limit) });
+export async function fetchDueWords(limit = 20, courseId?: string, locale = 'en'): Promise<DueWordsResponse> {
+  const params = new URLSearchParams({ limit: String(limit), locale });
   if (courseId) params.set('course', courseId);
   const res = await apiFetch(`/api/practice/due-words?${params}`);
   const data = await res.json();
@@ -33,20 +36,21 @@ export async function fetchDueWords(limit = 20, courseId?: string): Promise<DueW
   return data;
 }
 
-// Record a rating; the server runs SM-2 and reschedules the word
+// Record a rating; the server runs SM-2 and reschedules the word.
+// Pass courseProgressId (instead of vocabularyItemId) for course words.
 export async function submitAttempt(
-  vocabularyItemId: string,
+  itemId: string,
   rating: SrsRating,
-  responseTimeMs?: number
+  responseTimeMs?: number,
+  isCourseWord = false
 ): Promise<void> {
+  const body = isCourseWord
+    ? { courseProgressId: itemId, quizMode: 'flashcard', rating, responseTimeMs }
+    : { vocabularyItemId: itemId, quizMode: 'flashcard', rating, responseTimeMs };
+
   const res = await apiFetch('/api/word-attempts', {
     method: 'POST',
-    body: JSON.stringify({
-      vocabularyItemId,
-      quizMode: 'flashcard',
-      rating,
-      responseTimeMs,
-    }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
