@@ -22,6 +22,7 @@ export interface CourseWord {
   word_zh: string;
   word_pinyin: string;
   word_en: string;
+  word_vi?: string | null;
   example_sentence?: string | null;
   hsk_level?: number | null;
   sort_order: number;
@@ -51,12 +52,14 @@ export async function fetchCourses(opts: {
   difficulty?: string;
   sort?: CourseSort;
   q?: string;
+  locale?: string;
 }): Promise<{ courses: Course[]; totalPages: number }> {
   const params = new URLSearchParams();
   params.set('page', String(opts.page ?? 1));
   if (opts.difficulty && opts.difficulty !== 'all') params.set('difficulty', opts.difficulty);
   if (opts.sort) params.set('sort', opts.sort);
   if (opts.q) params.set('q', opts.q);
+  if (opts.locale) params.set('locale', opts.locale);
 
   const res = await apiFetch(`/api/courses?${params}`);
   const data = await res.json();
@@ -64,8 +67,10 @@ export async function fetchCourses(opts: {
   return { courses: data.courses ?? [], totalPages: data.totalPages ?? 1 };
 }
 
-export async function fetchCourseDetail(id: string, url?: string): Promise<CourseDetail> {
-  const res = await apiFetch(url ?? `/api/courses/${id}`);
+export async function fetchCourseDetail(id: string, opts?: { url?: string; locale?: string }): Promise<CourseDetail> {
+  const baseUrl = opts?.url ?? `/api/courses/${id}`;
+  const url = opts?.locale ? `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}locale=${opts.locale}` : baseUrl;
+  const res = await apiFetch(url);
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? 'Failed to load course');
   // API returns `subscription` (raw row or null); map to boolean for the UI
@@ -80,8 +85,8 @@ export async function subscribeToCourse(id: string): Promise<void> {
   }
 }
 
-export async function unsubscribeFromCourse(id: string, removeWords = false): Promise<void> {
-  const url = `/api/courses/${id}/subscribe${removeWords ? '?removeWords=true' : ''}`;
+export async function unsubscribeFromCourse(id: string): Promise<void> {
+  const url = `/api/courses/${id}/subscribe`;
   const res = await apiFetch(url, { method: 'DELETE' });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));

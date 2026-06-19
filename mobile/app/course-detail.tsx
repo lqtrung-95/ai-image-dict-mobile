@@ -16,6 +16,7 @@ import { saveWordToVocabulary, DetectedWord } from '../src/lib/analysis-service'
 import { fetchLists, VocabularyList } from '../src/lib/library-service';
 import { showError } from '../src/lib/toast';
 import { useTheme } from '../src/theme/theme-context';
+import { useLocale } from '../src/lib/locale-react-context';
 import { spacing, radius, typography, fonts } from '../src/theme/theme';
 import { Icon } from '../src/theme/ui-primitives';
 
@@ -35,6 +36,7 @@ export default function CourseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { colors } = useTheme();
+  const { t, locale } = useLocale();
 
   const [detail, setDetail] = useState<CourseDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +45,6 @@ export default function CourseDetailScreen() {
 
   // Unsubscribe confirmation dialog
   const [showUnsubDialog, setShowUnsubDialog] = useState(false);
-  const [removeWords, setRemoveWords] = useState(false);
 
   // Word list state
   const [wordsPage, setWordsPage] = useState<WordsPage | null>(null);
@@ -69,7 +70,7 @@ export default function CourseDetailScreen() {
   // Load course metadata (first page always)
   const loadCourse = useCallback(async (q = '') => {
     try {
-      const data = await fetchCourseDetail(id, buildUrl(1, q));
+      const data = await fetchCourseDetail(id, { url: buildUrl(1, q), locale });
       setDetail(data);
       const pg: WordsPage = {
         words: data.words ?? [],
@@ -85,7 +86,7 @@ export default function CourseDetailScreen() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load');
     }
-  }, [id, buildUrl]);
+  }, [id, buildUrl, locale]);
 
   // Reload on focus so enrollment/unsubscription state is fresh when navigating back
   useFocusEffect(useCallback(() => { loadCourse(); }, [loadCourse]));
@@ -96,7 +97,7 @@ export default function CourseDetailScreen() {
     const nextPage = currentPage + 1;
     setWordsLoading(true);
     try {
-      const data = await fetchCourseDetail(id, buildUrl(nextPage, search));
+      const data = await fetchCourseDetail(id, { url: buildUrl(nextPage, search), locale });
       const newWords = data.words ?? [];
       setAllWords((prev) => [...prev, ...newWords]);
       setCurrentPage(nextPage);
@@ -107,7 +108,7 @@ export default function CourseDetailScreen() {
     } finally {
       setWordsLoading(false);
     }
-  }, [id, buildUrl, wordsLoading, hasMore, currentPage, search]);
+  }, [id, buildUrl, wordsLoading, hasMore, currentPage, search, locale]);
 
   const handleSearchChange = (value: string) => {
     setSearchInput(value);
@@ -169,7 +170,7 @@ export default function CourseDetailScreen() {
     setShowUnsubDialog(false);
     setBusy(true);
     try {
-      await unsubscribeFromCourse(id, removeWords);
+      await unsubscribeFromCourse(id);
       await loadCourse(search);
     } catch (err) {
       showError('Action failed', err instanceof Error ? err.message : 'Try again');
@@ -226,7 +227,7 @@ export default function CourseDetailScreen() {
       <View style={{ flex: 1 }}>
         <Text style={{ fontFamily: fonts.hanzi, fontSize: 20, color: colors.onSurface }}>{w.word_zh}</Text>
         <Text style={[typography.pinyin, { color: colors.primary, marginTop: 2 }]}>{w.word_pinyin}</Text>
-        <Text style={[typography.body, { color: colors.onSurfaceVariant, marginTop: 2 }]}>{w.word_en}</Text>
+        <Text style={[typography.body, { color: colors.onSurfaceVariant, marginTop: 2 }]}>{locale === 'vi' && w.word_vi ? w.word_vi : w.word_en}</Text>
         {w.example_sentence ? (
           <Text style={[typography.label, { fontSize: 11.5, color: colors.outline, marginTop: 3 }]} numberOfLines={2}>
             {w.example_sentence}
@@ -341,14 +342,14 @@ export default function CourseDetailScreen() {
         <Pressable style={[styles.studyBtn, { backgroundColor: colors.primary }]} onPress={startStudy}>
           <Icon name="play-arrow" size={20} color={colors.onPrimary} />
           <Text style={[typography.label, { fontSize: 15, color: colors.onPrimary }]}>
-            {due > 0 ? `Study ${due} due word${due > 1 ? 's' : ''}` : 'Study this course'}
+            {due > 0 ? t(due > 1 ? 'courseDetail.studyDuePlural' : 'courseDetail.studyDue', { count: due }) : t('courseDetail.studyCourse')}
           </Text>
         </Pressable>
       ) : (
         <Pressable style={[styles.studyBtn, { backgroundColor: colors.primaryContainer }]} onPress={toggleSubscribe} disabled={busy}>
           <Icon name="bolt" size={20} color={colors.onPrimaryContainer} />
           <Text style={[typography.label, { fontSize: 15, color: colors.onPrimaryContainer }]}>
-            {busy ? 'Enrolling…' : 'Enroll & start learning'}
+            {busy ? t('courseDetail.enrolling') : t('courseDetail.enroll')}
           </Text>
         </Pressable>
       )}
@@ -356,7 +357,7 @@ export default function CourseDetailScreen() {
       {subscribed && (
         <Pressable style={[styles.subToggle, { borderColor: colors.outlineVariant }]} onPress={toggleSubscribe} disabled={busy}>
           <Text style={[typography.label, { fontSize: 13, color: colors.onSurfaceVariant }]}>
-            {busy ? '…' : '✓ Enrolled — tap to unsubscribe'}
+            {busy ? '…' : t('courseDetail.enrolled')}
           </Text>
         </Pressable>
       )}
@@ -364,7 +365,7 @@ export default function CourseDetailScreen() {
       {/* Rating */}
       {subscribed && (
         <View style={styles.rateRow}>
-          <Text style={[typography.body, { color: colors.onSurfaceVariant, marginRight: 4 }]}>Your rating:</Text>
+          <Text style={[typography.body, { color: colors.onSurfaceVariant, marginRight: 4 }]}>{t('courseDetail.yourRating')}</Text>
           {[1, 2, 3, 4, 5].map((s) => (
             <Pressable key={s} onPress={() => handleRate(s)}>
               <Text style={{ color: '#d9a14a', fontSize: 26 }}>{s <= myRating ? '★' : '☆'}</Text>
@@ -379,7 +380,7 @@ export default function CourseDetailScreen() {
         <TextInput
           value={searchInput}
           onChangeText={handleSearchChange}
-          placeholder="Search characters, pinyin, meaning…"
+          placeholder={t('courseDetail.searchPlaceholder')}
           placeholderTextColor={colors.outline}
           style={[typography.body, { flex: 1, color: colors.onSurface, marginLeft: 8 }]}
         />
@@ -440,41 +441,24 @@ export default function CourseDetailScreen() {
         <View style={styles.overlay}>
           <View style={[styles.dialog, { backgroundColor: colors.surface, borderColor: colors.outlineVariant }]}>
             <Text style={[typography.heading, { color: colors.onSurface, marginBottom: spacing.sm }]}>
-              Unsubscribe from course?
+              {t('courseDetail.unsubscribeTitle')}
             </Text>
-            <Text style={[typography.body, { color: colors.onSurfaceVariant, marginBottom: spacing.lg, lineHeight: 22 }]}>
-              Your SRS progress for this course will be removed.
+            <Text style={[typography.body, { color: colors.onSurfaceVariant, marginBottom: spacing.xl, lineHeight: 22 }]}>
+              {t('courseDetail.unsubscribeBody')}
             </Text>
-
-            {/* Checkbox row */}
-            <Pressable
-              style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xl }}
-              onPress={() => setRemoveWords((v) => !v)}
-            >
-              <View style={[
-                styles.checkbox,
-                { borderColor: removeWords ? colors.primary : colors.outlineVariant },
-                removeWords && { backgroundColor: colors.primary },
-              ]}>
-                {removeWords && <Text style={{ color: colors.onPrimary, fontSize: 11, fontWeight: '700' }}>✓</Text>}
-              </View>
-              <Text style={[typography.body, { color: colors.onSurface, flex: 1 }]}>
-                Also remove this course's words from my library
-              </Text>
-            </Pressable>
 
             <View style={{ flexDirection: 'row', gap: spacing.sm }}>
               <Pressable
                 style={[styles.dialogBtn, { flex: 1, borderWidth: 1, borderColor: colors.outlineVariant, backgroundColor: colors.surface }]}
                 onPress={() => setShowUnsubDialog(false)}
               >
-                <Text style={[typography.label, { color: colors.onSurface }]}>Cancel</Text>
+                <Text style={[typography.label, { color: colors.onSurface }]}>{t('courseDetail.cancel')}</Text>
               </Pressable>
               <Pressable
                 style={[styles.dialogBtn, { flex: 1, backgroundColor: colors.error }]}
                 onPress={confirmUnsubscribe}
               >
-                <Text style={[typography.label, { color: colors.onError ?? '#fff' }]}>Unsubscribe</Text>
+                <Text style={[typography.label, { color: colors.onError ?? '#fff' }]}>{t('courseDetail.unsubscribe')}</Text>
               </Pressable>
             </View>
           </View>
