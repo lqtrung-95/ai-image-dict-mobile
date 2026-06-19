@@ -14,7 +14,7 @@ import { useLocale } from '../../src/lib/locale-react-context';
 export default function VocabularyScreen() {
   const { user } = useAuth();
   const { colors } = useTheme();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const insets = useSafeAreaInsets();
   const [items, setItems] = useState<VocabularyItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -28,14 +28,14 @@ export default function VocabularyScreen() {
   const load = useCallback(async (query: string, append = false, offset = 0) => {
     try {
       setError(null);
-      const page = await fetchVocabulary(query, offset);
+      const page = await fetchVocabulary(query, offset, undefined, locale);
       setItems((prev) => (append ? [...prev, ...page.items] : page.items));
       setTotal(page.total);
       setHasMore(page.hasMore);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load');
     }
-  }, []);
+  }, [locale]);
 
   // Initial load + debounced search
   useEffect(() => {

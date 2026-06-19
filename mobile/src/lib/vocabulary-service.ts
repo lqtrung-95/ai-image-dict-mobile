@@ -24,9 +24,10 @@ const PAGE_SIZE = 50;
 export async function fetchVocabulary(
   search: string,
   offset: number,
-  listId?: string
+  listId?: string,
+  locale = 'en'
 ): Promise<VocabularyPage> {
-  const params = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(offset) });
+  const params = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(offset), locale });
   if (search.trim()) params.set('q', search.trim());
   if (listId) params.set('list', listId);
 
