@@ -110,6 +110,8 @@ export const en = {
     filterPopular: 'Popular',
     filterTopRated: 'Top Rated',
     filterEnrolled: 'Enrolled',
+    sectionEnrolled: 'My Courses',
+    sectionAvailable: 'Available Courses',
     filterNotEnrolled: 'Not Enrolled',
     filterAllHsk: 'All HSK',
     wordsMeta: '%{words} words · %{learners} learners',

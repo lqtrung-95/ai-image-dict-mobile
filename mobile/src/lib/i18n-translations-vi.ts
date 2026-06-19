@@ -110,6 +110,8 @@ export const vi = {
     filterPopular: 'Phổ biến',
     filterTopRated: 'Đánh giá cao',
     filterEnrolled: 'Đã đăng ký',
+    sectionEnrolled: 'Khóa học của tôi',
+    sectionAvailable: 'Khóa học khác',
     filterNotEnrolled: 'Chưa đăng ký',
     filterAllHsk: 'Tất cả HSK',
     wordsMeta: '%{words} từ · %{learners} học viên',
