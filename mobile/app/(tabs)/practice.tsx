@@ -10,9 +10,9 @@ import { useTheme } from '../../src/theme/theme-context';
 import { spacing, radius, typography, fonts, makeShadow } from '../../src/theme/theme';
 import { AppHeader } from '../../src/components/app-header';
 import { fetchStats } from '../../src/lib/stats-service';
+import { useLocale } from '../../src/lib/locale-react-context';
 
 type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
-
 type Href = Parameters<ReturnType<typeof useRouter>['push']>[0];
 
 interface Quiz {
@@ -35,75 +35,24 @@ interface MiniGame {
   premium?: boolean;
 }
 
-const QUIZZES: Quiz[] = [
-  {
-    href: '/practice-flashcards',
-    icon: 'style',
-    title: 'Flashcards',
-    subtitle: 'Spaced repetition · words due today',
-    badge: 'SRS',
-    badgeColor: '#2d6a4f',
-  },
-  {
-    href: { pathname: '/practice-quiz', params: { mode: 'multiple-choice' } },
-    icon: 'quiz',
-    title: 'Multiple Choice',
-    subtitle: 'Meaning & contextual usage',
-    badge: 'Lv 2',
-    badgeColor: '#4caf50',
-    premium: true,
-  },
-  {
-    href: { pathname: '/practice-quiz', params: { mode: 'listening' } },
-    icon: 'hearing',
-    title: 'Listening Challenge',
-    subtitle: 'Audio identification mastery',
-    score: 'Score 850',
-    premium: true,
-  },
-  {
-    href: { pathname: '/practice-quiz', params: { mode: 'pinyin' } },
-    icon: 'translate',
-    title: 'Pinyin Master',
-    subtitle: 'Tone and spelling accuracy',
-    badge: 'Lv 4',
-    badgeColor: '#e53935',
-    premium: true,
-  },
-  {
-    href: '/practice-handwriting',
-    icon: 'draw',
-    title: 'Handwriting',
-    subtitle: 'Trace characters stroke by stroke',
-    badge: 'New',
-    badgeColor: '#0f5238',
-    premium: true,
-  },
-];
-
-const MINI_GAMES: MiniGame[] = [
-  {
-    href: { pathname: '/practice-games', params: { game: 'matching' } },
-    icon: 'extension',
-    title: 'Character Match',
-    subtitle: 'Speed matching pair puzzle',
-    stat: 'Top: 1240',
-    premium: true,
-  },
-  {
-    href: { pathname: '/practice-games', params: { game: 'rapid' } },
-    icon: 'speed',
-    title: 'Speed Quiz',
-    subtitle: 'Rapid-fire character recall',
-    stat: 'Streak: 12',
-    premium: true,
-  },
-];
-
 export default function PracticeMenuScreen() {
   const { user } = useAuth();
   const { colors } = useTheme();
+  const { t } = useLocale();
   const router = useRouter();
+
+  const QUIZZES: Quiz[] = [
+    { href: '/practice-flashcards', icon: 'style', title: t('practiceMenu.flashcardsTitle'), subtitle: t('practiceMenu.flashcardsSub'), badge: 'SRS', badgeColor: '#2d6a4f' },
+    { href: { pathname: '/practice-quiz', params: { mode: 'multiple-choice' } }, icon: 'quiz', title: t('practiceMenu.multipleChoiceTitle'), subtitle: t('practiceMenu.multipleChoiceSub'), badge: 'Lv 2', badgeColor: '#4caf50', premium: true },
+    { href: { pathname: '/practice-quiz', params: { mode: 'listening' } }, icon: 'hearing', title: t('practiceMenu.listeningTitle'), subtitle: t('practiceMenu.listeningSub'), score: 'Score 850', premium: true },
+    { href: { pathname: '/practice-quiz', params: { mode: 'pinyin' } }, icon: 'translate', title: t('practiceMenu.pinyinTitle'), subtitle: t('practiceMenu.pinyinSub'), badge: 'Lv 4', badgeColor: '#e53935', premium: true },
+    { href: '/practice-handwriting', icon: 'draw', title: t('practiceMenu.handwritingTitle'), subtitle: t('practiceMenu.handwritingSub'), badge: 'New', badgeColor: '#0f5238', premium: true },
+  ];
+
+  const MINI_GAMES: MiniGame[] = [
+    { href: { pathname: '/practice-games', params: { game: 'matching' } }, icon: 'extension', title: t('practiceMenu.characterMatchTitle'), subtitle: t('practiceMenu.characterMatchSub'), stat: 'Top: 1240', premium: true },
+    { href: { pathname: '/practice-games', params: { game: 'rapid' } }, icon: 'speed', title: t('practiceMenu.speedQuizTitle'), subtitle: t('practiceMenu.speedQuizSub'), stat: 'Streak: 12', premium: true },
+  ];
   const [streak, setStreak] = useState(0);
   const [quizGoalDone, setQuizGoalDone] = useState(12);
   const quizGoalTotal = 20;
@@ -134,12 +83,12 @@ export default function PracticeMenuScreen() {
         <View style={[styles.goalCard, { backgroundColor: colors.surface, ...makeShadow(colors, 'card') }]}>
           <View style={{ flex: 1 }}>
             <Text style={[typography.label, { fontSize: 11, color: colors.outline, textTransform: 'uppercase', letterSpacing: 0.5 }]}>
-              Weekly Quiz Goal
+              {t('practiceMenu.weeklyGoalLabel')}
             </Text>
             <Text style={[styles.goalStat, { color: colors.onSurface }]}>
-              {quizGoalDone}/{quizGoalTotal} Challenges
+              {t('practiceMenu.challengesStat', { done: quizGoalDone, total: quizGoalTotal })}
             </Text>
-            <Text style={[typography.body, { fontSize: 13, color: colors.outline }]}>completed</Text>
+            <Text style={[typography.body, { fontSize: 13, color: colors.outline }]}>{t('practiceMenu.weeklyGoalCompleted')}</Text>
 
             {/* Progress bar */}
             <View style={[styles.goalTrack, { backgroundColor: colors.surfaceContainer }]}>
@@ -156,9 +105,9 @@ export default function PracticeMenuScreen() {
 
         {/* Knowledge Quizzes section */}
         <View style={styles.sectionHeader}>
-          <Text style={[typography.heading, { color: colors.onSurface }]}>Knowledge Quizzes</Text>
+          <Text style={[typography.heading, { color: colors.onSurface }]}>{t('practiceMenu.knowledgeQuizzes')}</Text>
           <Pressable onPress={() => router.push('/practice-quiz' as never)}>
-            <Text style={[typography.label, { fontSize: 13, color: colors.primary }]}>View All</Text>
+            <Text style={[typography.label, { fontSize: 13, color: colors.primary }]}>{t('practiceMenu.viewAll')}</Text>
           </Pressable>
         </View>
 
@@ -201,9 +150,9 @@ export default function PracticeMenuScreen() {
 
         {/* Mini Games section */}
         <View style={styles.sectionHeader}>
-          <Text style={[typography.heading, { color: colors.onSurface }]}>Mini Games</Text>
+          <Text style={[typography.heading, { color: colors.onSurface }]}>{t('practiceMenu.miniGames')}</Text>
           <Pressable onPress={() => router.push('/practice-games' as never)}>
-            <Text style={[typography.label, { fontSize: 13, color: colors.primary }]}>Explore</Text>
+            <Text style={[typography.label, { fontSize: 13, color: colors.primary }]}>{t('practiceMenu.explore')}</Text>
           </Pressable>
         </View>
 
@@ -241,14 +190,14 @@ export default function PracticeMenuScreen() {
         >
           <View style={{ flex: 1 }}>
             <Text style={[typography.label, { fontSize: 11, color: colors.onPrimary, opacity: 0.7, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }]}>
-              Daily Special
+              {t('practiceMenu.dailySpecial')}
             </Text>
-            <Text style={[styles.dailyTitle, { color: colors.onPrimary }]}>Ink Stroke Rush</Text>
+            <Text style={[styles.dailyTitle, { color: colors.onPrimary }]}>{t('practiceMenu.inkStrokeRush')}</Text>
             <Text style={[typography.body, { fontSize: 13, color: colors.onPrimary, opacity: 0.85, marginTop: 2, marginBottom: spacing.md }]}>
-              Unlock today's exclusive calligraphy badge
+              {t('practiceMenu.inkStrokeRushSub')}
             </Text>
             <View style={[styles.startBtn, { backgroundColor: colors.onPrimary }]}>
-              <Text style={[typography.label, { fontSize: 13, color: colors.primary }]}>Start Challenge</Text>
+              <Text style={[typography.label, { fontSize: 13, color: colors.primary }]}>{t('practiceMenu.startChallenge')}</Text>
             </View>
           </View>
           <View style={styles.dailyDecor}>

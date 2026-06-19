@@ -11,10 +11,12 @@ import { spacing, radius, typography, fonts, makeShadow } from '../../src/theme/
 import { AppHeader } from '../../src/components/app-header';
 import { fetchStats } from '../../src/lib/stats-service';
 import { fetchVocabulary, VocabularyItem } from '../../src/lib/vocabulary-service';
+import { useLocale } from '../../src/lib/locale-react-context';
 
 export default function HomeScreen() {
   const { user } = useAuth();
   const { colors } = useTheme();
+  const { t } = useLocale();
   const router = useRouter();
   const [streak, setStreak] = useState<number | null>(null);
   const [recentWords, setRecentWords] = useState<VocabularyItem[]>([]);
@@ -27,7 +29,7 @@ export default function HomeScreen() {
 
   const greeting = (() => {
     const h = new Date().getHours();
-    return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+    return h < 12 ? t('home.greetingMorning') : h < 18 ? t('home.greetingAfternoon') : t('home.greetingEvening');
   })();
 
   return (
@@ -41,7 +43,7 @@ export default function HomeScreen() {
             {greeting}{user?.displayName ? `, ${user.displayName}` : ''}.
           </Text>
           <Text style={[typography.body, { color: colors.onSurfaceVariant }]}>
-            {user ? 'Ready to master your characters today?' : 'Snap a photo to start learning Chinese.'}
+            {user ? t('home.subtitleLoggedIn') : t('home.subtitleGuest')}
           </Text>
         </View>
 
@@ -56,14 +58,14 @@ export default function HomeScreen() {
           <View style={[styles.streakBanner, { backgroundColor: colors.primarySoft, borderColor: colors.primary }]}>
             <MaterialIcons name="local-fire-department" size={20} color={colors.primary} />
             <Text style={[typography.label, { color: colors.primary, fontSize: 13, flex: 1 }]}>
-              {streak}-Day Streak — Keep it up!
+              {t('home.streakBanner', { streak })}
             </Text>
           </View>
         )}
 
         {/* Quick Learning */}
         <View style={{ gap: spacing.sm }}>
-          <Eyebrow>Quick Learning</Eyebrow>
+          <Eyebrow>{t('home.quickLearning')}</Eyebrow>
           <View style={{ flexDirection: 'row', gap: spacing.cardGutter }}>
             <Pressable
               style={({ pressed }) => [
@@ -74,7 +76,7 @@ export default function HomeScreen() {
               onPress={() => router.push('/(tabs)/capture')}
             >
               <MaterialIcons name="photo-camera" size={30} color={colors.onPrimaryContainer} />
-              <Text style={[typography.label, { color: colors.onPrimaryContainer, fontSize: 13 }]}>Capture & Learn</Text>
+              <Text style={[typography.label, { color: colors.onPrimaryContainer, fontSize: 13 }]}>{t('home.captureAndLearn')}</Text>
             </Pressable>
             <Pressable
               style={({ pressed }) => [
@@ -85,7 +87,7 @@ export default function HomeScreen() {
               onPress={() => router.push(user ? '/practice-flashcards' : '/(auth)/login')}
             >
               <MaterialIcons name="history-edu" size={30} color={colors.onSurfaceVariant} />
-              <Text style={[typography.label, { color: colors.onSurfaceVariant, fontSize: 13 }]}>Daily Review</Text>
+              <Text style={[typography.label, { color: colors.onSurfaceVariant, fontSize: 13 }]}>{t('home.dailyReview')}</Text>
             </Pressable>
           </View>
         </View>
@@ -94,9 +96,9 @@ export default function HomeScreen() {
         {user && recentWords.length > 0 && (
           <View style={{ gap: spacing.sm }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Eyebrow>Recent Discoveries</Eyebrow>
+              <Eyebrow>{t('home.recentDiscoveries')}</Eyebrow>
               <Pressable onPress={() => router.push('/(tabs)/vocabulary')}>
-                <Text style={[typography.label, { color: colors.primary, fontSize: 12 }]}>View All</Text>
+                <Text style={[typography.label, { color: colors.primary, fontSize: 12 }]}>{t('home.viewAll')}</Text>
               </Pressable>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm }}>
@@ -114,9 +116,9 @@ export default function HomeScreen() {
         {!user && (
           <Card>
             <Text style={[typography.body, { color: colors.onSurfaceVariant, textAlign: 'center', marginBottom: spacing.sm }]}>
-              Log in to save words, track progress, and more.
+              {t('home.guestCta')}
             </Text>
-            <AppButton label="Log in / Sign up" onPress={() => router.push('/(auth)/login')} />
+            <AppButton label={t('home.loginSignup')} onPress={() => router.push('/(auth)/login')} />
           </Card>
         )}
       </Screen>

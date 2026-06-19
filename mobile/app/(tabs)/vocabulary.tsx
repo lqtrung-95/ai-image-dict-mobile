@@ -9,10 +9,12 @@ import { fetchVocabulary, VocabularyItem } from '../../src/lib/vocabulary-servic
 import { useTheme } from '../../src/theme/theme-context';
 import { spacing, radius, typography, fonts } from '../../src/theme/theme';
 import { Eyebrow, Icon } from '../../src/theme/ui-primitives';
+import { useLocale } from '../../src/lib/locale-react-context';
 
 export default function VocabularyScreen() {
   const { user } = useAuth();
   const { colors } = useTheme();
+  const { t } = useLocale();
   const insets = useSafeAreaInsets();
   const [items, setItems] = useState<VocabularyItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -67,13 +69,13 @@ export default function VocabularyScreen() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <AppHeader />
       <View style={{ flex: 1, paddingHorizontal: spacing.containerMargin, paddingTop: spacing.md }}>
-      <Text style={[typography.headline, { color: colors.onSurface, marginBottom: spacing.md }]}>Library</Text>
+      <Text style={[typography.headline, { color: colors.onSurface, marginBottom: spacing.md }]}>{t('library.title')}</Text>
 
       <View style={[searchStyles.bar, { backgroundColor: colors.surface, borderColor: colors.outlineVariant }]}>
         <Icon name="search" size={20} color={colors.outline} />
         <TextInput
           style={{ flex: 1, color: colors.onSurface, fontFamily: fonts.body, fontSize: 15 }}
-          placeholder="Search 汉字, pinyin, or English…"
+          placeholder={t('library.searchPlaceholder')}
           placeholderTextColor={colors.outline}
           value={search}
           onChangeText={setSearch}
@@ -82,7 +84,7 @@ export default function VocabularyScreen() {
       </View>
       {!loading && !error && (
         <Eyebrow style={{ marginTop: spacing.md, marginBottom: spacing.sm }}>
-          {total} {total === 1 ? 'word' : 'words'}
+          {total === 1 ? t('library.wordCountSingle', { count: total }) : t('library.wordCount', { count: total })}
         </Eyebrow>
       )}
 
@@ -94,7 +96,7 @@ export default function VocabularyScreen() {
         <View style={{ alignItems: 'center', marginTop: 64 }}>
           <Icon name="menu-book" size={44} color={colors.outline} />
           <Text style={[typography.body, { color: colors.onSurfaceVariant, textAlign: 'center', marginTop: spacing.md }]}>
-            {search ? 'No words match your search.' : 'No words yet.\nCapture a photo to start collecting vocabulary!'}
+            {search ? t('library.emptySearch') : t('library.emptyLibrary')}
           </Text>
         </View>
       ) : (

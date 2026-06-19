@@ -7,6 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Platform } from 'react-native';
 import Purchases from 'react-native-purchases';
 import { useAuth } from '../../src/lib/auth-context';
+import { LocaleSwitcherRow } from '../../src/components/locale-switcher-row';
 import { usePremium } from '../../src/lib/premium-context';
 import { exportVocabularyToAnki } from '../../src/lib/anki-export-service';
 import { TextInputModal } from '../../src/components/text-input-modal';
@@ -16,6 +17,7 @@ import { AppHeader } from '../../src/components/app-header';
 import { AppButton, Icon } from '../../src/theme/ui-primitives';
 import { useTheme, ThemeMode } from '../../src/theme/theme-context';
 import { spacing, radius, typography, fonts, makeShadow } from '../../src/theme/theme';
+import { useLocale } from '../../src/lib/locale-react-context';
 
 function StatCardSkeleton() {
   const { colors } = useTheme();
@@ -50,6 +52,7 @@ export default function ProfileScreen() {
   const { user, logout } = useAuth();
   const { isPremiumUser, refresh: refreshPremium } = usePremium();
   const { colors, mode, setMode } = useTheme();
+  const { t } = useLocale();
   const router = useRouter();
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -81,12 +84,12 @@ export default function ProfileScreen() {
             <Icon name="person" size={48} color={colors.primary} />
           </View>
           <Text style={[typography.headline, { color: colors.onSurface, marginTop: spacing.md, marginBottom: spacing.xs }]}>
-            Guest
+            {t('profile.guest')}
           </Text>
           <Text style={[typography.body, { color: colors.onSurfaceVariant, textAlign: 'center', marginBottom: spacing.xl }]}>
-            Log in to save vocabulary, track progress, and sync across devices.
+            {t('profile.guestSubtitle')}
           </Text>
-          <AppButton label="Log in / Sign up" onPress={() => router.push('/(auth)/login')} />
+          <AppButton label={t('profile.loginSignup')} onPress={() => router.push('/(auth)/login')} />
         </View>
       </View>
     );
@@ -140,7 +143,7 @@ export default function ProfileScreen() {
   };
 
   const hskBadge = stats ? computeHskBadge(stats.hskDistribution ?? {}) : null;
-  const themeLabel = mode === 'light' ? 'Light' : mode === 'dark' ? 'Dark' : 'System';
+  const themeLabel = mode === 'light' ? t('profile.themeLight') : mode === 'dark' ? t('profile.themeDark') : t('profile.themeSystem');
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -189,11 +192,11 @@ export default function ProfileScreen() {
             <>
               <View style={[styles.statCard, { backgroundColor: colors.surface, ...makeShadow(colors, 'card') }]}>
                 <Text style={[styles.statValue, { color: colors.onSurface }]}>{stats.learnedWords.toLocaleString()}</Text>
-                <Text style={[typography.label, { fontSize: 11, color: colors.outline }]}>Characters Mastered</Text>
+                <Text style={[typography.label, { fontSize: 11, color: colors.outline }]}>{t('profile.charactersMastered')}</Text>
               </View>
               <View style={[styles.statCard, { backgroundColor: colors.surface, ...makeShadow(colors, 'card') }]}>
                 <Text style={[styles.statValue, { color: colors.onSurface }]}>{stats.currentStreak}</Text>
-                <Text style={[typography.label, { fontSize: 11, color: colors.outline }]}>Day Streak</Text>
+                <Text style={[typography.label, { fontSize: 11, color: colors.outline }]}>{t('profile.dayStreak')}</Text>
               </View>
             </>
           ) : (
@@ -205,7 +208,7 @@ export default function ProfileScreen() {
         </View>
 
         {/* Premium section */}
-        <Text style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}>Subscription</Text>
+        <Text style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}>{t('profile.subscription')}</Text>
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
           {isPremiumUser ? (
             <View style={styles.settingRow}>
@@ -213,8 +216,8 @@ export default function ProfileScreen() {
                 <Text style={{ fontSize: 16 }}>👑</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[typography.label, { color: colors.onSurface }]}>Premium Active</Text>
-                <Text style={[typography.body, { fontSize: 12, color: colors.outline }]}>All features unlocked</Text>
+                <Text style={[typography.label, { color: colors.onSurface }]}>{t('profile.premiumActive')}</Text>
+                <Text style={[typography.body, { fontSize: 12, color: colors.outline }]}>{t('profile.allFeaturesUnlocked')}</Text>
               </View>
               <MaterialIcons name="check-circle" size={20} color={colors.primary} />
             </View>
@@ -227,8 +230,8 @@ export default function ProfileScreen() {
                 <Text style={{ fontSize: 16 }}>👑</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[typography.label, { color: colors.primary }]}>Upgrade to Premium</Text>
-                <Text style={[typography.body, { fontSize: 12, color: colors.outline }]}>Unlimited analyses · all quizzes · games</Text>
+                <Text style={[typography.label, { color: colors.primary }]}>{t('profile.upgradeToPremium')}</Text>
+                <Text style={[typography.body, { fontSize: 12, color: colors.outline }]}>{t('profile.unlimitedAnalyses')}</Text>
               </View>
               <MaterialIcons name="chevron-right" size={20} color={colors.primary} />
             </Pressable>
@@ -236,7 +239,7 @@ export default function ProfileScreen() {
           <View style={[styles.divider, { backgroundColor: colors.outlineVariant }]} />
           <SettingRow
             icon="card-giftcard"
-            label="Redeem Promo Code"
+            label={t('profile.redeemPromoCode')}
             onPress={async () => {
               if (Platform.OS === 'ios') {
                 // Native iOS code redemption sheet
@@ -256,56 +259,27 @@ export default function ProfileScreen() {
         </View>
 
         {/* Preferences section */}
-        <Text style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}>Preferences</Text>
+        <Text style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}>{t('profile.preferences')}</Text>
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <SettingRow
-            icon="notifications-none"
-            label="Notification Preferences"
-            onPress={() => router.push('/notification-settings')}
-            colors={colors}
-          />
+          <LocaleSwitcherRow />
           <View style={[styles.divider, { backgroundColor: colors.outlineVariant }]} />
-          <SettingRow
-            icon="brightness-medium"
-            label="App Theme"
-            value={themeLabel}
-            onPress={() => setThemeModalOpen(true)}
-            colors={colors}
-          />
+          <SettingRow icon="notifications-none" label={t('profile.notificationPreferences')} onPress={() => router.push('/notification-settings')} colors={colors} />
           <View style={[styles.divider, { backgroundColor: colors.outlineVariant }]} />
-          <SettingRow
-            icon="ios-share"
-            label={busy === 'anki' ? 'Preparing…' : 'Export Data'}
-            onPress={() => run('anki', exportVocabularyToAnki, 'Export failed')}
-            colors={colors}
-          />
+          <SettingRow icon="brightness-medium" label={t('profile.appTheme')} value={themeLabel} onPress={() => setThemeModalOpen(true)} colors={colors} />
           <View style={[styles.divider, { backgroundColor: colors.outlineVariant }]} />
-          <SettingRow
-            icon="privacy-tip"
-            label="Privacy Policy"
-            onPress={() => router.push('/privacy-policy' as never)}
-            colors={colors}
-          />
+          <SettingRow icon="ios-share" label={busy === 'anki' ? t('profile.preparingExport') : t('profile.exportData')} onPress={() => run('anki', exportVocabularyToAnki, 'Export failed')} colors={colors} />
+          <View style={[styles.divider, { backgroundColor: colors.outlineVariant }]} />
+          <SettingRow icon="feedback" label={t('profile.sendFeedback')} onPress={() => router.push('/feedback' as never)} colors={colors} />
+          <View style={[styles.divider, { backgroundColor: colors.outlineVariant }]} />
+          <SettingRow icon="privacy-tip" label={t('profile.privacyPolicy')} onPress={() => router.push('/privacy-policy' as never)} colors={colors} />
         </View>
 
         {/* Account section */}
-        <Text style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}>Account</Text>
+        <Text style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}>{t('profile.account')}</Text>
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <SettingRow
-            icon="logout"
-            label="Log Out"
-            onPress={logout}
-            danger
-            colors={colors}
-          />
+          <SettingRow icon="logout" label={t('profile.logOut')} onPress={logout} danger colors={colors} />
           <View style={[styles.divider, { backgroundColor: colors.outlineVariant }]} />
-          <SettingRow
-            icon="delete-outline"
-            label={busy === 'delete' ? 'Deleting…' : 'Delete Account & Data'}
-            onPress={confirmDeleteAccount}
-            danger
-            colors={colors}
-          />
+          <SettingRow icon="delete-outline" label={busy === 'delete' ? t('profile.deleting') : t('profile.deleteAccountData')} onPress={confirmDeleteAccount} danger colors={colors} />
         </View>
 
       </ScrollView>
@@ -354,15 +328,16 @@ function ThemePicker({
   onClose: () => void;
   colors: ReturnType<typeof useTheme>['colors'];
 }) {
+  const { t } = useLocale();
   const opts: { value: ThemeMode; label: string }[] = [
-    { value: 'system', label: 'System' },
-    { value: 'light', label: 'Light' },
-    { value: 'dark', label: 'Dark' },
+    { value: 'system', label: t('profile.themeSystem') },
+    { value: 'light', label: t('profile.themeLight') },
+    { value: 'dark', label: t('profile.themeDark') },
   ];
   return (
     <Pressable style={styles.modalBackdrop} onPress={onClose}>
       <View style={[styles.themeSheet, { backgroundColor: colors.surface }]}>
-        <Text style={[typography.heading, { color: colors.onSurface, marginBottom: spacing.md }]}>App Theme</Text>
+        <Text style={[typography.heading, { color: colors.onSurface, marginBottom: spacing.md }]}>{t('profile.appTheme')}</Text>
         {opts.map((o) => {
           const active = mode === o.value;
           return (
