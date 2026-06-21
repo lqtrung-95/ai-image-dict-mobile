@@ -7,6 +7,7 @@ import {
   startImport, saveImportedWords, ImportSourceType, ExtractedWord, ImportPreview,
 } from '../src/lib/import-service';
 import { useTheme } from '../src/theme/theme-context';
+import { useLocale } from '../src/lib/locale-react-context';
 import { spacing, radius, typography, fonts } from '../src/theme/theme';
 import { Icon } from '../src/theme/ui-primitives';
 import { AppHeader } from '../src/components/app-header';
@@ -17,6 +18,7 @@ type Phase = 'input' | 'extracting' | 'preview' | 'saving';
 export default function ImportVocabularyScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { t } = useLocale();
   const [phase, setPhase] = useState<Phase>('input');
   const [type, setType] = useState<ImportSourceType>('url');
   const [source, setSource] = useState('');
@@ -66,11 +68,11 @@ export default function ImportVocabularyScreen() {
   if (phase === 'extracting' || phase === 'saving') {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <AppHeader title="Import Words" showBack />
+        <AppHeader title={t('importVocab.title')} showBack />
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[typography.body, { color: colors.onSurfaceVariant, marginTop: spacing.md }]}>
-            {phase === 'extracting' ? 'AI is extracting vocabulary…' : 'Saving words…'}
+            {phase === 'extracting' ? t('importVocab.extracting') : t('importVocab.saving')}
           </Text>
         </View>
       </View>
@@ -80,11 +82,11 @@ export default function ImportVocabularyScreen() {
   if (phase === 'preview' && preview) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <AppHeader title="Import Words" showBack />
+        <AppHeader title={t('importVocab.title')} showBack />
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing.containerMargin, paddingBottom: 48 }}>
         <Text style={[typography.heading, { color: colors.onSurface }]}>{preview.sourceTitle}</Text>
         <Text style={[typography.pinyin, { color: colors.onSurfaceVariant, marginBottom: spacing.md }]}>
-          {preview.preview.length} words found · {selected.size} selected (tap to toggle)
+          {t('importVocab.wordsFound', { count: preview.preview.length, selected: selected.size })}
         </Text>
 
         <View style={{ marginBottom: spacing.md }}>
@@ -111,10 +113,10 @@ export default function ImportVocabularyScreen() {
         })}
 
         <Pressable style={primaryBtn(selected.size === 0)} onPress={handleSave} disabled={selected.size === 0}>
-          <Text style={[typography.label, { fontSize: 15, color: colors.onPrimaryContainer }]}>Save {selected.size} words</Text>
+          <Text style={[typography.label, { fontSize: 15, color: colors.onPrimaryContainer }]}>{t('importVocab.saveBtn', { count: selected.size })}</Text>
         </Pressable>
         <Pressable style={{ padding: spacing.md, marginTop: 4 }} onPress={() => setPhase('input')}>
-          <Text style={[typography.label, { fontSize: 14, color: colors.onSurfaceVariant, textAlign: 'center' }]}>Start over</Text>
+          <Text style={[typography.label, { fontSize: 14, color: colors.onSurfaceVariant, textAlign: 'center' }]}>{t('importVocab.startOver')}</Text>
         </Pressable>
         </ScrollView>
       </View>
@@ -123,27 +125,27 @@ export default function ImportVocabularyScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <AppHeader title="Import Words" showBack />
+      <AppHeader title={t('importVocab.title')} showBack />
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing.containerMargin }}>
       <Text style={[typography.body, { color: colors.onSurfaceVariant, marginBottom: spacing.md }]}>
-        Import Chinese vocabulary from a web article or pasted text. AI extracts the words for you.
+        {t('importVocab.intro')}
       </Text>
 
       <View style={styles.segmentRow}>
-        {(['url', 'text'] as ImportSourceType[]).map((t) => (
+        {(['url', 'text'] as ImportSourceType[]).map((srcType) => (
           <Pressable
-            key={t}
-            style={[styles.segment, { backgroundColor: type === t ? colors.primarySoft : colors.surface, borderColor: type === t ? colors.primary : colors.outlineVariant }]}
-            onPress={() => setType(t)}
+            key={srcType}
+            style={[styles.segment, { backgroundColor: type === srcType ? colors.primarySoft : colors.surface, borderColor: type === srcType ? colors.primary : colors.outlineVariant }]}
+            onPress={() => setType(srcType)}
           >
-            <Text style={[typography.label, { fontSize: 14, color: colors.onSurface }]}>{t === 'url' ? 'From URL' : 'Paste Text'}</Text>
+            <Text style={[typography.label, { fontSize: 14, color: colors.onSurface }]}>{srcType === 'url' ? t('importVocab.fromUrl') : t('importVocab.pasteText')}</Text>
           </Pressable>
         ))}
       </View>
 
       <TextInput
         style={[inputStyle, type === 'text' && { minHeight: 160, textAlignVertical: 'top' }]}
-        placeholder={type === 'url' ? 'https://example.com/chinese-article' : 'Paste Chinese text here (min 50 characters)…'}
+        placeholder={type === 'url' ? t('importVocab.urlPlaceholder') : t('importVocab.textPlaceholder')}
         placeholderTextColor={colors.outline}
         value={source}
         onChangeText={setSource}
@@ -154,10 +156,10 @@ export default function ImportVocabularyScreen() {
       />
 
       <Pressable style={primaryBtn(!source.trim())} onPress={handleExtract} disabled={!source.trim()}>
-        <Text style={[typography.label, { fontSize: 15, color: colors.onPrimaryContainer }]}>Extract Vocabulary</Text>
+        <Text style={[typography.label, { fontSize: 15, color: colors.onPrimaryContainer }]}>{t('importVocab.extractBtn')}</Text>
       </Pressable>
 
-      <Text style={[typography.label, { fontSize: 12, color: colors.outline, textAlign: 'center', marginTop: spacing.md }]}>Limit: 10 imports per hour</Text>
+      <Text style={[typography.label, { fontSize: 12, color: colors.outline, textAlign: 'center', marginTop: spacing.md }]}>{t('importVocab.rateLimit')}</Text>
       </ScrollView>
     </View>
   );

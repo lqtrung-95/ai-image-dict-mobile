@@ -8,12 +8,14 @@ import {
 import { setLatestAnalysisResult } from '../src/lib/analysis-result-store';
 import type { DetectedWord } from '../src/lib/analysis-service';
 import { useTheme } from '../src/theme/theme-context';
+import { useLocale } from '../src/lib/locale-react-context';
 import { spacing, radius, typography, makeShadow } from '../src/theme/theme';
 import { Icon } from '../src/theme/ui-primitives';
 import { AppHeader } from '../src/components/app-header';
 
 export default function HistoryScreen() {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const router = useRouter();
   const [analyses, setAnalyses] = useState<HistoryAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,10 +56,10 @@ export default function HistoryScreen() {
   };
 
   const confirmDelete = (item: HistoryAnalysis) => {
-    Alert.alert('Delete analysis', 'Remove this photo analysis? Saved words are kept.', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('history.title'), t('history.deleteConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Delete', style: 'destructive',
+        text: t('common.delete'), style: 'destructive',
         onPress: async () => {
           try { await deleteAnalysis(item.id); setAnalyses((prev) => prev.filter((a) => a.id !== item.id)); }
           catch { showError('Delete failed', 'Try again'); }
@@ -89,13 +91,13 @@ export default function HistoryScreen() {
       contentContainerStyle={{ padding: spacing.containerMargin, gap: spacing.sm }}
       ListHeaderComponent={
         <Text style={[typography.headline, { color: colors.onSurface, marginBottom: spacing.sm }]}>
-          Analysis History
+          {t('history.title')}
         </Text>
       }
       ListEmptyComponent={
         <View style={{ alignItems: 'center', marginTop: 80, width: '100%' }}>
           <Icon name="history" size={44} color={colors.outline} />
-          <Text style={[typography.body, { color: colors.onSurfaceVariant, textAlign: 'center', marginTop: spacing.md }]}>No analyses yet. Capture a photo to begin!</Text>
+          <Text style={[typography.body, { color: colors.onSurfaceVariant, textAlign: 'center', marginTop: spacing.md }]}>{t('history.empty')}</Text>
         </View>
       }
       renderItem={({ item }) => (

@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet, Modal, Alert, Animated, ActivityIndi
 import { speakChinese } from '../lib/tts-speech-service';
 import { fetchWordOfDay, saveWordOfDay, WordOfDay } from '../lib/stats-service';
 import { useTheme } from '../theme/theme-context';
+import { useLocale } from '../lib/locale-react-context';
 import { spacing, radius, typography, fonts, makeShadow } from '../theme/theme';
 import { Icon, Eyebrow } from '../theme/ui-primitives';
 
@@ -51,6 +52,7 @@ function WordOfDayCardSkeleton() {
 // Daily curated HSK word, styled as the Stitch "Word of the Day" rice-grid card.
 export function WordOfDayCard() {
   const { colors } = useTheme();
+  const { locale, t } = useLocale();
   const [word, setWord] = useState<WordOfDay | null>(null);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
@@ -58,7 +60,7 @@ export function WordOfDayCard() {
   const [practiceOpen, setPracticeOpen] = useState(false);
 
   useEffect(() => {
-    fetchWordOfDay().then((res) => {
+    fetchWordOfDay(locale).then((res) => {
       if (res) { setWord(res.word); setSaved(res.alreadySaved); }
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
@@ -81,7 +83,7 @@ export function WordOfDayCard() {
   return (
     <View>
       <View style={styles.headerRow}>
-        <Eyebrow>Word of the Day</Eyebrow>
+        <Eyebrow>{t('wordOfDay.title')}</Eyebrow>
       </View>
 
       <View style={[styles.card, { backgroundColor: colors.surface, ...makeShadow(colors, 'card') }]}>
@@ -94,12 +96,14 @@ export function WordOfDayCard() {
             <Text style={[styles.hanzi, { color: colors.onSurface }]}>{word.word_zh}</Text>
           </View>
 
-          <Text style={[styles.meaning, { color: colors.primary }]}>{word.word_en}</Text>
+          <Text style={[styles.meaning, { color: colors.primary }]}>{locale === 'vi' && word.word_vi ? word.word_vi : word.word_en}</Text>
           <View style={[styles.divider, { backgroundColor: colors.primaryFixed }]} />
           {word.example_sentence ? (
             <Text style={[styles.example, { color: colors.onSurfaceVariant }]}>{word.example_sentence}</Text>
           ) : null}
-          {word.example_sentence_en ? (
+          {locale === 'vi' && word.example_sentence_vi ? (
+            <Text style={[styles.exampleEn, { color: colors.outline }]}>{word.example_sentence_vi}</Text>
+          ) : word.example_sentence_en ? (
             <Text style={[styles.exampleEn, { color: colors.outline }]}>{word.example_sentence_en}</Text>
           ) : null}
         </View>
@@ -108,11 +112,11 @@ export function WordOfDayCard() {
         <View style={[styles.footer, { borderTopColor: colors.surfaceContainer }]}>
           <Pressable style={styles.footerBtn} onPress={() => speakChinese(word.word_zh)}>
             <Icon name="volume-up" size={18} color={colors.primary} />
-            <Text style={[typography.label, { color: colors.primary }]}>Listen</Text>
+            <Text style={[typography.label, { color: colors.primary }]}>{t('wordOfDay.listen')}</Text>
           </Pressable>
           <Pressable style={styles.footerBtn} onPress={() => setPracticeOpen(true)}>
             <Icon name="school" size={18} color={colors.primary} />
-            <Text style={[typography.label, { color: colors.primary }]}>Practice</Text>
+            <Text style={[typography.label, { color: colors.primary }]}>{t('wordOfDay.practice')}</Text>
           </Pressable>
           <Pressable style={styles.footerBtn} onPress={handleSave} disabled={saved || saving}>
             {saving
@@ -120,7 +124,7 @@ export function WordOfDayCard() {
               : <Icon name={saved ? 'bookmark' : 'bookmark-border'} size={18} color={colors.primary} />
             }
             <Text style={[typography.label, { color: colors.primary }]}>
-              {saved ? 'Saved' : saving ? 'Saving' : 'Save'}
+              {saved ? t('wordOfDay.saved') : saving ? t('wordOfDay.saving') : t('wordOfDay.save')}
             </Text>
           </Pressable>
         </View>
@@ -133,6 +137,7 @@ export function WordOfDayCard() {
 
 function WordPracticeModal({ word, visible, onClose }: { word: WordOfDay; visible: boolean; onClose: () => void }) {
   const { colors } = useTheme();
+  const { t, locale } = useLocale();
   const [flipped, setFlipped] = useState(false);
   useEffect(() => { if (visible) setFlipped(false); }, [visible]);
 
@@ -150,14 +155,14 @@ function WordPracticeModal({ word, visible, onClose }: { word: WordOfDay; visibl
           {flipped ? (
             <View style={{ alignItems: 'center', marginTop: spacing.md }}>
               <Text style={{ fontFamily: fonts.bodyMedium, color: colors.primary, fontSize: 20 }}>{word.word_pinyin}</Text>
-              <Text style={[typography.heading, { color: colors.onSurface, marginTop: 6 }]}>{word.word_en}</Text>
+              <Text style={[typography.heading, { color: colors.onSurface, marginTop: 6 }]}>{locale === 'vi' && word.word_vi ? word.word_vi : word.word_en}</Text>
             </View>
           ) : (
-            <Text style={[typography.body, { color: colors.outline, marginTop: spacing.lg }]}>Tap to reveal</Text>
+            <Text style={[typography.body, { color: colors.outline, marginTop: spacing.lg }]}>{t('wordOfDay.tapToReveal')}</Text>
           )}
         </Pressable>
         <Pressable style={{ marginTop: spacing.lg, padding: spacing.md }} onPress={onClose}>
-          <Text style={[typography.label, { color: colors.primary, fontSize: 14 }]}>Done</Text>
+          <Text style={[typography.label, { color: colors.primary, fontSize: 14 }]}>{t('wordOfDay.done')}</Text>
         </Pressable>
       </View>
     </Modal>

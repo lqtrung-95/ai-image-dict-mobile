@@ -6,6 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../src/lib/auth-context';
 import { analyzePhoto, getTrialUsed, TRIAL_LIMIT } from '../../src/lib/analysis-service';
+import { useLocale } from '../../src/lib/locale-react-context';
 import { setLatestAnalysisResult } from '../../src/lib/analysis-result-store';
 import { Screen, Eyebrow } from '../../src/theme/ui-primitives';
 import { useTheme } from '../../src/theme/theme-context';
@@ -81,6 +82,7 @@ function AnalyzingOverlay({ uri, visible }: { uri: string | null; visible: boole
 export default function CaptureScreen() {
   const { user } = useAuth();
   const { colors } = useTheme();
+  const { locale } = useLocale();
   const router = useRouter();
   const [analyzeUri, setAnalyzeUri] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
@@ -107,7 +109,7 @@ export default function CaptureScreen() {
     setAnalyzeUri(asset.uri);
     setAnalyzing(true);
     try {
-      const analysis = await analyzePhoto(`data:image/jpeg;base64,${asset.base64}`, asset.uri, !!user);
+      const analysis = await analyzePhoto(`data:image/jpeg;base64,${asset.base64}`, asset.uri, !!user, locale);
       setLatestAnalysisResult(analysis);
       router.push('/analysis-result');
     } catch (err) {

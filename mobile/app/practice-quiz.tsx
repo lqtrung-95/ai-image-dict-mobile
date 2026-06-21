@@ -13,22 +13,24 @@ import {
   isPinyinCorrect, recordQuizAnswer, MIN_WORDS_FOR_QUIZ,
 } from '../src/lib/quiz-service';
 import { useTheme } from '../src/theme/theme-context';
+import { useLocale } from '../src/lib/locale-react-context';
 import { spacing, radius, typography, fonts, makeShadow } from '../src/theme/theme';
 import { Icon, Card } from '../src/theme/ui-primitives';
 
 type Phase = 'menu' | 'loading' | 'playing' | 'done' | 'tooFew' | 'error';
 type IconName = React.ComponentProps<typeof Icon>['name'];
 
-const MODES: { mode: QuizMode; icon: IconName; title: string; desc: string }[] = [
-  { mode: 'multiple-choice', icon: 'checklist', title: 'Multiple Choice', desc: 'Read the word, pick the meaning' },
-  { mode: 'listening', icon: 'hearing', title: 'Listening', desc: 'Hear the word, pick the meaning' },
-  { mode: 'pinyin', icon: 'keyboard', title: 'Type Pinyin', desc: 'See the word, type its pinyin' },
-];
-
 export default function QuizScreen() {
   const { user } = useAuth();
   const { isPremiumUser } = usePremium();
   const { colors } = useTheme();
+  const { t } = useLocale();
+
+  const MODES: { mode: QuizMode; icon: IconName; title: string; desc: string }[] = [
+    { mode: 'multiple-choice', icon: 'checklist', title: t('quiz.modeMultipleChoice'), desc: t('quiz.modeMultipleChoiceDesc') },
+    { mode: 'listening', icon: 'hearing', title: t('quiz.modeListening'), desc: t('quiz.modeListeningDesc') },
+    { mode: 'pinyin', icon: 'keyboard', title: t('quiz.modePinyin'), desc: t('quiz.modePinyinDesc') },
+  ];
   const params = useLocalSearchParams<{ mode?: string }>();
   const [phase, setPhase] = useState<Phase>('menu');
   const [mode, setMode] = useState<QuizMode>('multiple-choice');
@@ -53,10 +55,10 @@ export default function QuizScreen() {
   }, [params.mode, user]);
 
   if (!user) {
-    return <LoginRequiredPrompt message="Log in to take vocabulary quizzes." />;
+    return <LoginRequiredPrompt message={t('quiz.loginPrompt')} />;
   }
   if (!isPremiumUser) {
-    return <LoginRequiredPrompt message="Upgrade to Premium to unlock all quiz modes." actionLabel="View Premium" actionRoute="/premium" />;
+    return <LoginRequiredPrompt message={t('quiz.premiumPrompt')} actionLabel={t('quiz.viewPremium')} actionRoute="/premium" />;
   }
 
   const start = async (selectedMode: QuizMode) => {
@@ -104,9 +106,9 @@ export default function QuizScreen() {
   if (phase === 'menu') {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <AppHeader title="Quiz" showBack />
+        <AppHeader title={t('quiz.title')} showBack />
         <View style={{ flex: 1, padding: spacing.containerMargin, gap: spacing.md }}>
-        <Text style={[typography.body, { color: colors.onSurfaceVariant }]}>Choose a quiz mode</Text>
+        <Text style={[typography.body, { color: colors.onSurfaceVariant }]}>{t('quiz.chooseMode')}</Text>
         {MODES.map((m) => (
           <Card key={m.mode} onPress={() => start(m.mode)}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
@@ -128,7 +130,7 @@ export default function QuizScreen() {
   if (phase === 'loading') {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <AppHeader title="Quiz" showBack />
+        <AppHeader title={t('quiz.title')} showBack />
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" color={colors.primary} /></View>
       </View>
     );
@@ -136,16 +138,16 @@ export default function QuizScreen() {
   if (phase === 'error') {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <AppHeader title="Quiz" showBack />
-        <PracticeStatusView icon="error-outline" title="Something went wrong" actionLabel="Back to modes" onAction={() => setPhase('menu')} />
+        <AppHeader title={t('quiz.title')} showBack />
+        <PracticeStatusView icon="error-outline" title={t('quiz.errorTitle')} actionLabel={t('quiz.backToModes')} onAction={() => setPhase('menu')} />
       </View>
     );
   }
   if (phase === 'tooFew') {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <AppHeader title="Quiz" showBack />
-        <PracticeStatusView icon="menu-book" title="Need more words" subtitle={`Save at least ${MIN_WORDS_FOR_QUIZ} words to play quizzes. Capture more photos!`} actionLabel="Back" onAction={() => setPhase('menu')} />
+        <AppHeader title={t('quiz.title')} showBack />
+        <PracticeStatusView icon="menu-book" title={t('quiz.needMoreWords')} subtitle={t('quiz.needMoreWordsSub', { min: MIN_WORDS_FOR_QUIZ })} actionLabel={t('quiz.back')} onAction={() => setPhase('menu')} />
       </View>
     );
   }
@@ -153,14 +155,14 @@ export default function QuizScreen() {
     const pct = Math.round((score / questions.length) * 100);
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <AppHeader title="Quiz" showBack />
+        <AppHeader title={t('quiz.title')} showBack />
         <PracticeStatusView
           icon={pct >= 80 ? 'emoji-events' : pct >= 50 ? 'thumb-up' : 'fitness-center'}
           title={`${score} / ${questions.length}`}
-          subtitle={`${pct}% correct`}
-          actionLabel="Play Again"
+          subtitle={t('quiz.percentCorrect', { pct })}
+          actionLabel={t('quiz.playAgain')}
           onAction={() => start(mode)}
-          secondaryLabel="Change Mode"
+          secondaryLabel={t('quiz.changeMode')}
           onSecondary={() => setPhase('menu')}
         />
       </View>
@@ -169,17 +171,17 @@ export default function QuizScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <AppHeader title="Quiz" showBack />
+      <AppHeader title={t('quiz.title')} showBack />
       <View style={{ flex: 1, padding: spacing.containerMargin }}>
       <Text style={[typography.label, { fontSize: 13, color: colors.onSurfaceVariant, textAlign: 'center' }]}>
-        {index + 1} / {questions.length}  ·  Score {score}
+        {index + 1} / {questions.length}  ·  {t('quiz.scoreLabel', { score })}
       </Text>
 
       <View style={styles.prompt}>
         {mode === 'listening' ? (
           <Pressable style={{ alignItems: 'center' }} onPress={() => speakChinese(current.word.wordZh)}>
             <Icon name="volume-up" size={56} color={colors.primary} />
-            <Text style={[typography.pinyin, { color: colors.outline, marginTop: spacing.sm }]}>Tap to replay</Text>
+            <Text style={[typography.pinyin, { color: colors.outline, marginTop: spacing.sm }]}>{t('quiz.tapToReplay')}</Text>
           </Pressable>
         ) : (
           <Pressable onPress={() => speakChinese(current.word.wordZh)} style={{ alignItems: 'center' }}>
@@ -193,7 +195,7 @@ export default function QuizScreen() {
         <View>
           <TextInput
             style={[styles.input, { backgroundColor: colors.surface, color: colors.onSurface, borderColor: colors.outlineVariant, fontFamily: fonts.body }]}
-            placeholder="Type the pinyin…"
+            placeholder={t('quiz.typePinyin')}
             placeholderTextColor={colors.outline}
             value={typed}
             onChangeText={setTyped}
@@ -204,7 +206,7 @@ export default function QuizScreen() {
           />
           {revealed ? (
             <Text style={[typography.heading, { textAlign: 'center', marginTop: spacing.md, color: isPinyinCorrect(typed, current.word.wordPinyin) ? colors.primary : colors.error }]}>
-              {isPinyinCorrect(typed, current.word.wordPinyin) ? '✓ Correct!' : `✗ Answer: ${current.word.wordPinyin}`}
+              {isPinyinCorrect(typed, current.word.wordPinyin) ? t('quiz.correct') : t('quiz.wrongAnswer', { answer: current.word.wordPinyin })}
             </Text>
           ) : (
             <Pressable
@@ -212,7 +214,7 @@ export default function QuizScreen() {
               onPress={handlePinyinSubmit}
               disabled={!typed}
             >
-              <Text style={[typography.label, { fontSize: 15, color: colors.onPrimaryContainer }]}>Check</Text>
+              <Text style={[typography.label, { fontSize: 15, color: colors.onPrimaryContainer }]}>{t('quiz.check')}</Text>
             </Pressable>
           )}
         </View>

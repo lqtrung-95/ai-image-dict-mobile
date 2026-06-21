@@ -13,6 +13,7 @@ import {
 } from '../src/lib/handwriting-service';
 import type { VocabularyItem } from '../src/lib/vocabulary-service';
 import { useTheme } from '../src/theme/theme-context';
+import { useLocale } from '../src/lib/locale-react-context';
 import { spacing, radius, typography, fonts } from '../src/theme/theme';
 
 type Phase = 'loading' | 'tooFew' | 'error' | 'practicing' | 'done';
@@ -31,6 +32,7 @@ function shuffle<T>(arr: T[]): T[] {
 export default function HandwritingScreen() {
   const { user } = useAuth();
   const { colors } = useTheme();
+  const { t } = useLocale();
   const canvasRef = useRef<HandwritingCanvasHandle>(null);
 
   const [phase, setPhase] = useState<Phase>('loading');
@@ -61,7 +63,7 @@ export default function HandwritingScreen() {
   useEffect(() => { if (user) start(); }, [user, start]);
 
   if (!user) {
-    return <LoginRequiredPrompt message="Log in to practice writing characters by hand." />;
+    return <LoginRequiredPrompt message={t('handwriting.loginPrompt')} />;
   }
 
   const resetCanvas = () => { canvasRef.current?.clear(); setStrokeCount(0); setRevealed(false); };
@@ -99,7 +101,7 @@ export default function HandwritingScreen() {
 
   const withHeader = (child: React.ReactNode) => (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <AppHeader title="Handwriting" showBack />
+      <AppHeader title={t('handwriting.title')} showBack />
       {child}
     </View>
   );
@@ -114,13 +116,13 @@ export default function HandwritingScreen() {
 
   if (phase === 'error') {
     return withHeader(
-      <PracticeStatusView icon="error-outline" title="Couldn't load words" subtitle="Please try again." actionLabel="Retry" onAction={start} />
+      <PracticeStatusView icon="error-outline" title={t('handwriting.errorTitle')} subtitle={t('handwriting.errorSub')} actionLabel={t('handwriting.retry')} onAction={start} />
     );
   }
 
   if (phase === 'tooFew') {
     return withHeader(
-      <PracticeStatusView icon="draw" title="No words to write yet" subtitle="Save some Chinese words first, then come back to practice writing them by hand." />
+      <PracticeStatusView icon="draw" title={t('handwriting.noWordsTitle')} subtitle={t('handwriting.noWordsSub')} />
     );
   }
 
@@ -129,9 +131,9 @@ export default function HandwritingScreen() {
     return withHeader(
       <PracticeStatusView
         icon="brush"
-        title="Writing session complete!"
-        subtitle={`${results.correct} of ${total} words marked confident`}
-        actionLabel="Practice More"
+        title={t('handwriting.sessionDone')}
+        subtitle={t('flashcards.sessionResult', { correct: results.correct, total })}
+        actionLabel={t('handwriting.practiceMore')}
         onAction={start}
       />
     );
@@ -163,7 +165,7 @@ export default function HandwritingScreen() {
             <MaterialIcons name="volume-up" size={18} color={colors.primary} />
           </Pressable>
         ) : (
-          <Text style={[typography.pinyin, { color: colors.outline, marginTop: 4 }]}>Write the character for this meaning</Text>
+          <Text style={[typography.pinyin, { color: colors.outline, marginTop: 4 }]}>{t('handwriting.writePrompt')}</Text>
         )}
       </View>
 
@@ -179,11 +181,11 @@ export default function HandwritingScreen() {
       <View style={styles.toolRow}>
         <Pressable style={styles.tool} onPress={() => canvasRef.current?.undo()} disabled={strokeCount === 0}>
           <MaterialIcons name="undo" size={20} color={strokeCount === 0 ? colors.outlineVariant : colors.onSurfaceVariant} />
-          <Text style={[typography.label, { fontSize: 12, color: strokeCount === 0 ? colors.outlineVariant : colors.onSurfaceVariant }]}>Undo</Text>
+          <Text style={[typography.label, { fontSize: 12, color: strokeCount === 0 ? colors.outlineVariant : colors.onSurfaceVariant }]}>{t('handwriting.undo')}</Text>
         </Pressable>
         <Pressable style={styles.tool} onPress={resetCanvas} disabled={strokeCount === 0}>
           <MaterialIcons name="refresh" size={20} color={strokeCount === 0 ? colors.outlineVariant : colors.onSurfaceVariant} />
-          <Text style={[typography.label, { fontSize: 12, color: strokeCount === 0 ? colors.outlineVariant : colors.onSurfaceVariant }]}>Clear</Text>
+          <Text style={[typography.label, { fontSize: 12, color: strokeCount === 0 ? colors.outlineVariant : colors.onSurfaceVariant }]}>{t('handwriting.clear')}</Text>
         </Pressable>
       </View>
 
@@ -202,11 +204,11 @@ export default function HandwritingScreen() {
           <View style={styles.rateRow}>
             <Pressable style={[styles.rateBtn, { borderColor: colors.error }]} onPress={() => advance(false)}>
               <MaterialIcons name="replay" size={18} color={colors.error} />
-              <Text style={[typography.label, { fontSize: 14, color: colors.error }]}>Practice again</Text>
+              <Text style={[typography.label, { fontSize: 14, color: colors.error }]}>{t('handwriting.practiceAgain')}</Text>
             </Pressable>
             <Pressable style={[styles.rateBtn, { backgroundColor: colors.primaryContainer, borderColor: colors.primaryContainer }]} onPress={() => advance(true)}>
               <MaterialIcons name="check" size={18} color={colors.onPrimaryContainer} />
-              <Text style={[typography.label, { fontSize: 14, color: colors.onPrimaryContainer }]}>Got it</Text>
+              <Text style={[typography.label, { fontSize: 14, color: colors.onPrimaryContainer }]}>{t('handwriting.gotIt')}</Text>
             </Pressable>
           </View>
         )}

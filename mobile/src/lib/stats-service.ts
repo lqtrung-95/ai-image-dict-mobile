@@ -85,8 +85,8 @@ export interface WordOfDayResponse {
   alreadySaved: boolean;
 }
 
-export async function fetchWordOfDay(): Promise<WordOfDayResponse | null> {
-  const res = await apiFetch('/api/word-of-day');
+export async function fetchWordOfDay(locale = 'en'): Promise<WordOfDayResponse | null> {
+  const res = await apiFetch(`/api/word-of-day?locale=${locale}`);
   if (!res.ok) return null;
   const data = await res.json();
   if (!data.word) return null;

@@ -16,7 +16,7 @@ export const ONBOARDING_DONE_KEY = '@onboarding_done';
 const STEPS = [
   {
     id: 'welcome',
-    title: '墨迹 AI Hanzi',
+    title: 'Snap Mandarin',
     titleZh: '墨迹',
     subtitle: 'Bridging the ancient art of calligraphy with the precision of neural networks.',
     tagline: 'A nocturnal sanctuary for the modern scholar.',
@@ -86,7 +86,7 @@ export default function OnboardingScreen() {
             </View>
 
             <Text style={[styles.welcomeZh, { color: colors.primary }]}>墨迹</Text>
-            <Text style={[styles.welcomeTitle, { color: colors.onSurface }]}>AI Hanzi</Text>
+            <Text style={[styles.welcomeTitle, { color: colors.onSurface }]}>Snap Mandarin</Text>
             <Text style={[styles.welcomeSubtitle, { color: colors.onSurfaceVariant }]}>
               Bridging the ancient art of calligraphy with the precision of neural networks.
             </Text>

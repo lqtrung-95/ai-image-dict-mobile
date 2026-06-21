@@ -67,7 +67,8 @@ function normalizeWords(data: {
 export async function analyzePhoto(
   base64DataUrl: string,
   localUri: string,
-  isLoggedIn: boolean
+  isLoggedIn: boolean,
+  locale = 'en'
 ): Promise<AnalysisResult> {
   if (!isLoggedIn) {
     const used = await getTrialUsed();
@@ -79,7 +80,7 @@ export async function analyzePhoto(
   const endpoint = isLoggedIn ? '/api/analyze' : '/api/analyze-trial';
   const res = await apiFetch(endpoint, {
     method: 'POST',
-    body: JSON.stringify({ image: base64DataUrl }),
+    body: JSON.stringify({ image: base64DataUrl, locale }),
   });
 
   const data = await res.json();

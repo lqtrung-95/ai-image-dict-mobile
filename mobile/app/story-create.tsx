@@ -3,6 +3,7 @@ import { View, Text, TextInput, StyleSheet, FlatList, Image, Pressable, Activity
 import { useRouter } from 'expo-router';
 import { fetchHistory, createStory, HistoryAnalysis } from '../src/lib/library-service';
 import { useTheme } from '../src/theme/theme-context';
+import { useLocale } from '../src/lib/locale-react-context';
 import { spacing, radius, typography, fonts } from '../src/theme/theme';
 import { Icon } from '../src/theme/ui-primitives';
 import { AppHeader } from '../src/components/app-header';
@@ -11,6 +12,7 @@ import { showError } from '../src/lib/toast';
 export default function StoryCreateScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { t } = useLocale();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [photos, setPhotos] = useState<HistoryAnalysis[]>([]);
@@ -46,7 +48,7 @@ export default function StoryCreateScreen() {
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <AppHeader title="New Story" showBack />
+        <AppHeader title={t('storyCreate.title')} showBack />
         <View style={styles.center}><ActivityIndicator size="large" color={colors.primary} /></View>
       </View>
     );
@@ -56,7 +58,7 @@ export default function StoryCreateScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <AppHeader title="New Story" showBack />
+      <AppHeader title={t('storyCreate.title')} showBack />
       <FlatList
       style={{ flex: 1 }}
       data={photos}
@@ -66,10 +68,10 @@ export default function StoryCreateScreen() {
       columnWrapperStyle={{ gap: spacing.xs }}
       ListHeaderComponent={
         <View>
-          <TextInput style={inputStyle} placeholder="Story title" placeholderTextColor={colors.outline} value={title} onChangeText={setTitle} />
-          <TextInput style={[inputStyle, { height: 70 }]} placeholder="Description (optional)" placeholderTextColor={colors.outline} value={description} onChangeText={setDescription} multiline />
-          <Text style={[typography.heading, { fontSize: 15, color: colors.onSurface, marginBottom: spacing.sm }]}>Select photos ({selected.size} chosen)</Text>
-          {photos.length === 0 && <Text style={[typography.body, { color: colors.onSurfaceVariant, textAlign: 'center', marginTop: spacing.lg }]}>No photos to add. Capture some first!</Text>}
+          <TextInput style={inputStyle} placeholder={t('storyCreate.titlePlaceholder')} placeholderTextColor={colors.outline} value={title} onChangeText={setTitle} />
+          <TextInput style={[inputStyle, { height: 70 }]} placeholder={t('storyCreate.descPlaceholder')} placeholderTextColor={colors.outline} value={description} onChangeText={setDescription} multiline />
+          <Text style={[typography.heading, { fontSize: 15, color: colors.onSurface, marginBottom: spacing.sm }]}>{t('storyCreate.selectPhotos', { count: selected.size })}</Text>
+          {photos.length === 0 && <Text style={[typography.body, { color: colors.onSurfaceVariant, textAlign: 'center', marginTop: spacing.lg }]}>{t('storyCreate.noPhotos')}</Text>}
         </View>
       }
       renderItem={({ item }) => {
@@ -88,7 +90,7 @@ export default function StoryCreateScreen() {
             onPress={handleCreate}
             disabled={saving || !title.trim() || selected.size === 0}
           >
-            <Text style={[typography.label, { fontSize: 15, color: colors.onPrimaryContainer }]}>{saving ? 'Creating…' : 'Create Story'}</Text>
+            <Text style={[typography.label, { fontSize: 15, color: colors.onPrimaryContainer }]}>{saving ? t('storyCreate.creating') : t('storyCreate.createBtn')}</Text>
           </Pressable>
         ) : null
       }

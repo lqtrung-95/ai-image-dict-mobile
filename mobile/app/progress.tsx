@@ -5,6 +5,7 @@ import { fetchStats, fetchWordsByState, UserStats, WordsByState } from '../src/l
 import { StatsBarChart } from '../src/components/stats-bar-chart';
 import { AppHeader } from '../src/components/app-header';
 import { useTheme } from '../src/theme/theme-context';
+import { useLocale } from '../src/lib/locale-react-context';
 import { spacing, radius, typography, hskColors, makeShadow } from '../src/theme/theme';
 import { Eyebrow, Icon } from '../src/theme/ui-primitives';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -12,6 +13,11 @@ import { MaterialIcons } from '@expo/vector-icons';
 const HSK_LABELS: Record<string, string> = {
   hsk1: 'HSK 1', hsk2: 'HSK 2', hsk3: 'HSK 3',
   hsk4: 'HSK 4', hsk5: 'HSK 5', hsk6: 'HSK 6', unclassified: 'Other',
+};
+
+// Official cumulative HSK vocabulary counts per level
+const HSK_TOTAL: Record<string, number> = {
+  hsk1: 150, hsk2: 300, hsk3: 600, hsk4: 1200, hsk5: 2500, hsk6: 5000,
 };
 
 // Build a 13×7 heatmap grid from wordsPerDay data
@@ -53,18 +59,9 @@ interface Achievement {
   earned: boolean;
 }
 
-function buildAchievements(stats: UserStats, wordsByState: WordsByState | null): Achievement[] {
-  const mastered = wordsByState?.mastered ?? stats.learnedWords;
-  return [
-    { icon: '🖊️', title: 'First Word', desc: 'Save your first word', earned: stats.totalWords >= 1 },
-    { icon: '🔥', title: '3-Day Streak', desc: '3 consecutive days', earned: stats.currentStreak >= 3 },
-    { icon: '📚', title: 'Scholar', desc: '10 words learned', earned: stats.totalWords >= 10 },
-    { icon: '⭐', title: 'Writing Sage', desc: '5 words mastered', earned: mastered >= 5 },
-  ];
-}
-
 export default function ProgressScreen() {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const router = useRouter();
   const [stats, setStats] = useState<UserStats | null>(null);
   const [wordsByState, setWordsByState] = useState<WordsByState | null>(null);
@@ -96,12 +93,11 @@ export default function ProgressScreen() {
   const learning = (wordsByState?.learning ?? 0) + (wordsByState?.reviewing ?? 0);
   const totalHsk = Object.values(stats.hskDistribution ?? {}).reduce((a, b) => a + b, 0);
   const heatmapWeeks = buildHeatmap(stats.wordsPerDay ?? []);
-  const achievements = buildAchievements(stats, wordsByState);
-
-  const statChips = [
-    { label: 'Mastered', value: mastered, icon: 'school' as const },
-    { label: 'Learning', value: learning, icon: 'menu-book' as const },
-    { label: `${stats.currentStreak} Day Streak`, value: stats.totalWords, icon: 'local-fire-department' as const, sub: 'All Time' },
+  const achievements: Achievement[] = [
+    { icon: '🖊️', title: t('progressScreen.achievementFirstWordTitle'), desc: t('progressScreen.achievementFirstWordDesc'), earned: stats.totalWords >= 1 },
+    { icon: '🔥', title: t('progressScreen.achievementStreakTitle'), desc: t('progressScreen.achievementStreakDesc'), earned: stats.currentStreak >= 3 },
+    { icon: '📚', title: t('progressScreen.achievementScholarTitle'), desc: t('progressScreen.achievementScholarDesc'), earned: stats.totalWords >= 10 },
+    { icon: '⭐', title: t('progressScreen.achievementSageTitle'), desc: t('progressScreen.achievementSageDesc'), earned: mastered >= 5 },
   ];
 
   return (
@@ -119,13 +115,13 @@ export default function ProgressScreen() {
         }
       >
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg, gap: spacing.md }}>
-          <Text style={[typography.headlineLg, { color: colors.onSurface, flex: 1 }]}>Mastery Overview</Text>
+          <Text style={[typography.headlineLg, { color: colors.onSurface, flex: 1 }]}>{t('progressScreen.masteryOverview')}</Text>
           <Pressable
             style={[styles.leaderboardBtn, { backgroundColor: colors.primarySoft }]}
             onPress={() => router.push('/leaderboard' as never)}
           >
             <Text style={{ fontSize: 14 }}>🏆</Text>
-            <Text style={[typography.label, { fontSize: 12, color: colors.primary }]}>Rankings</Text>
+            <Text style={[typography.label, { fontSize: 12, color: colors.primary }]}>{t('progressScreen.rankings')}</Text>
           </Pressable>
         </View>
 
@@ -134,25 +130,25 @@ export default function ProgressScreen() {
           <View style={[styles.chip, { backgroundColor: colors.surface, ...makeShadow(colors, 'card') }]}>
             <Icon name="school" size={18} color={colors.primary} />
             <Text style={[typography.headlineLg, { color: colors.onSurface }]}>{mastered}</Text>
-            <Text style={[typography.label, { fontSize: 11, color: colors.outline }]}>Mastered</Text>
+            <Text style={[typography.label, { fontSize: 11, color: colors.outline }]}>{t('progressScreen.mastered')}</Text>
           </View>
           <View style={[styles.chip, { backgroundColor: colors.surface, ...makeShadow(colors, 'card') }]}>
             <Icon name="menu-book" size={18} color={colors.primary} />
             <Text style={[typography.headlineLg, { color: colors.onSurface }]}>{learning}</Text>
-            <Text style={[typography.label, { fontSize: 11, color: colors.outline }]}>Learning</Text>
+            <Text style={[typography.label, { fontSize: 11, color: colors.outline }]}>{t('progressScreen.learning')}</Text>
           </View>
           <View style={[styles.chip, { backgroundColor: colors.surface, ...makeShadow(colors, 'card') }]}>
             <MaterialIcons name="local-fire-department" size={18} color={colors.primary} />
             <Text style={[typography.headlineLg, { color: colors.onSurface }]}>{stats.currentStreak}</Text>
-            <Text style={[typography.label, { fontSize: 11, color: colors.outline }]}>Day Streak</Text>
+            <Text style={[typography.label, { fontSize: 11, color: colors.outline }]}>{t('progressScreen.dayStreak')}</Text>
           </View>
         </View>
 
         {/* Study Consistency heatmap */}
         <View style={sectionStyle}>
-          <Eyebrow style={{ marginBottom: spacing.xs }}>Study Consistency</Eyebrow>
+          <Eyebrow style={{ marginBottom: spacing.xs }}>{t('progressScreen.studyConsistency')}</Eyebrow>
           <Text style={[typography.label, { fontSize: 11, color: colors.outline, marginBottom: spacing.sm }]}>
-            Last 13 weeks of character practice
+            {t('progressScreen.studyConsistencySub')}
           </Text>
           <View style={styles.heatmapGrid}>
             {heatmapWeeks.map((week, wi) => (
@@ -167,7 +163,7 @@ export default function ProgressScreen() {
             <View style={[styles.streakBadge, { backgroundColor: colors.primaryContainer }]}>
               <MaterialIcons name="local-fire-department" size={14} color={colors.onPrimaryContainer} />
               <Text style={[typography.label, { fontSize: 11, color: colors.onPrimaryContainer }]}>
-                {stats.currentStreak} Day Streak
+                {stats.currentStreak} {t('progressScreen.dayStreak')}
               </Text>
             </View>
           )}
@@ -176,7 +172,7 @@ export default function ProgressScreen() {
         {/* HSK Level Distribution */}
         {totalHsk > 0 && (
           <View style={sectionStyle}>
-            <Eyebrow style={{ marginBottom: spacing.sm }}>HSK Level Distribution</Eyebrow>
+            <Eyebrow style={{ marginBottom: spacing.sm }}>{t('progressScreen.hskDistribution')}</Eyebrow>
             {Object.entries(stats.hskDistribution).map(([level, count]) => {
               if (!count) return null;
               const pct = Math.round((count / totalHsk) * 100);
@@ -199,17 +195,45 @@ export default function ProgressScreen() {
           </View>
         )}
 
+        {/* HSK Progress Dashboard */}
+        <View style={sectionStyle}>
+          <Eyebrow style={{ marginBottom: spacing.xs }}>{t('progressScreen.hskProgress')}</Eyebrow>
+          <Text style={[typography.label, { fontSize: 11, color: colors.outline, marginBottom: spacing.md }]}>
+            {t('progressScreen.hskProgressSub')}
+          </Text>
+          {(['hsk1', 'hsk2', 'hsk3', 'hsk4', 'hsk5', 'hsk6'] as const).map((level) => {
+            const captured = stats.hskDistribution[level] ?? 0;
+            const total = HSK_TOTAL[level];
+            const pct = Math.min(Math.round((captured / total) * 100), 100);
+            return (
+              <View key={level} style={{ marginBottom: spacing.md }}>
+                <View style={styles.barRow}>
+                  <Text style={[typography.label, { fontSize: 13, color: colors.onSurface }]}>
+                    {HSK_LABELS[level]}
+                  </Text>
+                  <Text style={[typography.label, { fontSize: 12, color: pct >= 100 ? colors.primary : colors.outline }]}>
+                    {captured} / {total}  {pct >= 100 ? '✓' : `${pct}%`}
+                  </Text>
+                </View>
+                <View style={[styles.track, { backgroundColor: colors.surfaceContainer }]}>
+                  <View style={{ height: '100%', width: `${pct}%`, backgroundColor: hskColors[level] ?? colors.primary, borderRadius: 4 }} />
+                </View>
+              </View>
+            );
+          })}
+        </View>
+
         {/* Review Forecast */}
         {stats.reviewForecast?.length > 0 && (
           <View style={sectionStyle}>
-            <Eyebrow style={{ marginBottom: spacing.md }}>Review Forecast</Eyebrow>
+            <Eyebrow style={{ marginBottom: spacing.md }}>{t('progressScreen.reviewForecast')}</Eyebrow>
             <StatsBarChart data={stats.reviewForecast} />
           </View>
         )}
 
         {/* Achievements */}
         <View style={sectionStyle}>
-          <Eyebrow style={{ marginBottom: spacing.sm }}>Achievements</Eyebrow>
+          <Eyebrow style={{ marginBottom: spacing.sm }}>{t('progressScreen.achievementsTitle')}</Eyebrow>
           <View style={styles.achievementsGrid}>
             {achievements.map((a) => (
               <View

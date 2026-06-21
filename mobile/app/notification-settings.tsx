@@ -7,6 +7,7 @@ import {
   getReminderPrefs, enableReminder, disableReminder, ReminderPrefs,
 } from '../src/lib/notifications-service';
 import { useTheme } from '../src/theme/theme-context';
+import { useLocale } from '../src/lib/locale-react-context';
 import { spacing, radius, typography } from '../src/theme/theme';
 import { Icon } from '../src/theme/ui-primitives';
 
@@ -19,6 +20,7 @@ function formatTime(hour: number, minute: number): string {
 
 export default function NotificationSettingsScreen() {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const [prefs, setPrefs] = useState<ReminderPrefs | null>(null);
   const [busy, setBusy] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
@@ -28,7 +30,7 @@ export default function NotificationSettingsScreen() {
   if (!prefs) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <AppHeader title="Reminders" showBack />
+        <AppHeader title={t('notifications.title')} showBack />
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -43,8 +45,7 @@ export default function NotificationSettingsScreen() {
         const next = await enableReminder(prefs.hour, prefs.minute);
         setPrefs(next);
         if (!next.enabled) {
-          // Permission denied — point the user to OS settings.
-          showInfo('Permission needed', 'Enable notifications for this app in your device settings.');
+          showInfo(t('notifications.permissionTitle'), t('notifications.permissionBody'));
         }
       } else {
         await disableReminder();
@@ -71,15 +72,15 @@ export default function NotificationSettingsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <AppHeader title="Reminders" showBack />
+      <AppHeader title={t('notifications.title')} showBack />
       <View style={{ padding: spacing.containerMargin }}>
         <Text style={[typography.body, { color: colors.onSurfaceVariant, marginBottom: spacing.lg }]}>
-          Get a daily nudge to practice and keep your streak alive.
+          {t('notifications.subtitle')}
         </Text>
 
         <View style={[styles.row, { backgroundColor: colors.surface }]}>
           <Icon name="notifications-active" size={20} color={colors.primary} />
-          <Text style={[typography.body, { flex: 1, color: colors.onSurface }]}>Daily study reminder</Text>
+          <Text style={[typography.body, { flex: 1, color: colors.onSurface }]}>{t('notifications.dailyReminder')}</Text>
           {busy ? (
             <ActivityIndicator size="small" color={colors.primary} />
           ) : (
@@ -97,7 +98,7 @@ export default function NotificationSettingsScreen() {
             onPress={() => setShowPicker((s) => !s)}
           >
             <Icon name="schedule" size={20} color={colors.onSurfaceVariant} />
-            <Text style={[typography.body, { flex: 1, color: colors.onSurface }]}>Reminder time</Text>
+            <Text style={[typography.body, { flex: 1, color: colors.onSurface }]}>{t('notifications.reminderTime')}</Text>
             <Text style={[typography.label, { fontSize: 14, color: colors.primary }]}>
               {formatTime(prefs.hour, prefs.minute)}
             </Text>

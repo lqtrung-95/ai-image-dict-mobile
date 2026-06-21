@@ -51,7 +51,7 @@ export function AppHeader({ title, showBack = false }: AppHeaderProps) {
         style={[styles.title, { color: colors.onSurface, fontFamily: fonts.headlineSemi }]}
         numberOfLines={1}
       >
-        {title ?? '墨选 AI Hanzi'}
+        {title ?? 'Snap Mandarin'}
       </Text>
 
       <Pressable onPress={() => router.push('/(tabs)/profile')} style={[styles.avatar, { backgroundColor: colors.primaryContainer }]} hitSlop={8}>

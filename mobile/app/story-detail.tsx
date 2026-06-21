@@ -6,6 +6,7 @@ import { fetchStoryDetail, StoryDetail } from '../src/lib/library-service';
 import { StoryNarrativeSection } from '../src/components/story-narrative-section';
 import { AppHeader } from '../src/components/app-header';
 import { useTheme } from '../src/theme/theme-context';
+import { useLocale } from '../src/lib/locale-react-context';
 import { spacing, radius, typography, fonts } from '../src/theme/theme';
 
 // A story reads top-to-bottom: each photo with its scene words underneath,
@@ -13,6 +14,7 @@ import { spacing, radius, typography, fonts } from '../src/theme/theme';
 export default function StoryDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
+  const { t } = useLocale();
   const [story, setStory] = useState<StoryDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,7 +48,7 @@ export default function StoryDetailScreen() {
 
       {story.description ? <Text style={[typography.body, { color: colors.onSurfaceVariant, marginBottom: 4 }]}>{story.description}</Text> : null}
       <Text style={[typography.label, { fontSize: 13, color: colors.outline, marginBottom: spacing.md }]}>
-        {story.photos.length} photos · {story.vocabularyCount} unique words
+        {t('storyDetail.photoCount', { photos: story.photos.length, words: story.vocabularyCount })}
       </Text>
 
       <StoryNarrativeSection storyId={id} savedNarrative={story.generated_content} />
@@ -66,7 +68,7 @@ export default function StoryDetailScreen() {
               ))}
             </View>
           ) : (
-            <Text style={[typography.pinyin, { color: colors.outline, marginTop: spacing.sm }]}>No words detected for this photo</Text>
+            <Text style={[typography.pinyin, { color: colors.outline, marginTop: spacing.sm }]}>{t('storyDetail.noWords')}</Text>
           )}
           {i < story.photos.length - 1 && <View style={{ height: 1, backgroundColor: colors.surfaceContainerHigh, marginVertical: spacing.lg }} />}
         </View>

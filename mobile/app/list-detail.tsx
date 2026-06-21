@@ -5,11 +5,13 @@ import { fetchVocabulary, VocabularyItem } from '../src/lib/vocabulary-service';
 import { VocabularyWordCard } from '../src/components/vocabulary-word-card';
 import { AppHeader } from '../src/components/app-header';
 import { useTheme } from '../src/theme/theme-context';
+import { useLocale } from '../src/lib/locale-react-context';
 import { spacing, typography } from '../src/theme/theme';
 
 export default function ListDetailScreen() {
   const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
   const { colors } = useTheme();
+  const { t } = useLocale();
   const [items, setItems] = useState<VocabularyItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +42,7 @@ export default function ListDetailScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ padding: spacing.containerMargin }}
           ListEmptyComponent={
-            <Text style={[typography.body, { color: colors.onSurfaceVariant, textAlign: 'center', marginTop: 64 }]}>This list has no words yet.</Text>
+            <Text style={[typography.body, { color: colors.onSurfaceVariant, textAlign: 'center', marginTop: 64 }]}>{t('lists.detailEmpty')}</Text>
           }
           renderItem={({ item }) => (
             <VocabularyWordCard

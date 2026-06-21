@@ -6,6 +6,7 @@ import { showError } from '../src/lib/toast';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { fetchLists, createList, deleteList, VocabularyList } from '../src/lib/library-service';
 import { useTheme } from '../src/theme/theme-context';
+import { useLocale } from '../src/lib/locale-react-context';
 import { spacing, radius, typography, fonts, makeShadow } from '../src/theme/theme';
 import { Icon } from '../src/theme/ui-primitives';
 import { AppHeader } from '../src/components/app-header';
@@ -15,6 +16,7 @@ const COLORS = ['#2d6a4f', '#3b82f6', '#d9a14a', '#ba181b', '#8b7fd9', '#0f766e'
 export default function ListsScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { t } = useLocale();
   const [lists, setLists] = useState<VocabularyList[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -41,10 +43,10 @@ export default function ListsScreen() {
   };
 
   const confirmDelete = (list: VocabularyList) => {
-    Alert.alert('Delete list', `Delete "${list.name}"? Words stay in your vocabulary.`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('lists.title'), t('lists.deleteConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Delete', style: 'destructive',
+        text: t('common.delete'), style: 'destructive',
         onPress: async () => {
           try { await deleteList(list.id); setLists((prev) => prev.filter((l) => l.id !== list.id)); }
           catch { showError('Delete failed', 'Try again'); }
@@ -56,7 +58,7 @@ export default function ListsScreen() {
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <AppHeader title="My Lists" showBack />
+        <AppHeader title={t('lists.title')} showBack />
         <View style={styles.center}><ActivityIndicator size="large" color={colors.primary} /></View>
       </View>
     );
@@ -64,7 +66,7 @@ export default function ListsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <AppHeader title="My Lists" showBack />
+      <AppHeader title={t('lists.title')} showBack />
       <FlatList
         data={lists}
         keyExtractor={(l) => l.id}
@@ -73,7 +75,7 @@ export default function ListsScreen() {
           <View style={{ alignItems: 'center', marginTop: 80 }}>
             <Icon name="folder-open" size={44} color={colors.outline} />
             <Text style={[typography.body, { color: colors.onSurfaceVariant, textAlign: 'center', marginTop: spacing.md }]}>
-              No lists yet. Create one to organize your words.
+              {t('lists.empty')}
             </Text>
           </View>
         }
@@ -87,7 +89,7 @@ export default function ListsScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[typography.heading, { color: colors.onSurface }]}>{item.name}</Text>
               <Text style={[typography.pinyin, { color: colors.outline, marginTop: 2 }]}>
-                {item.wordCount} words · {item.learnedCount} learned
+                {t('lists.wordsMeta', { words: item.wordCount, learned: item.learnedCount })}
               </Text>
             </View>
             <Icon name="chevron-right" size={24} color={colors.outline} />
@@ -100,16 +102,16 @@ export default function ListsScreen() {
         onPress={() => setModalOpen(true)}
       >
         <Icon name="add" size={20} color={colors.onPrimaryContainer} />
-        <Text style={[typography.label, { fontSize: 14, color: colors.onPrimaryContainer }]}>New List</Text>
+        <Text style={[typography.label, { fontSize: 14, color: colors.onPrimaryContainer }]}>{t('lists.newList')}</Text>
       </Pressable>
 
       <Modal visible={modalOpen} transparent animationType="fade" onRequestClose={() => setModalOpen(false)}>
         <View style={styles.backdrop}>
           <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
-            <Text style={[typography.heading, { color: colors.onSurface }]}>New List</Text>
+            <Text style={[typography.heading, { color: colors.onSurface }]}>{t('lists.newList')}</Text>
             <TextInput
               style={[styles.input, { backgroundColor: colors.background, color: colors.onSurface, borderColor: colors.outlineVariant, fontFamily: fonts.body }]}
-              placeholder="List name"
+              placeholder={t('lists.newListPlaceholder')}
               placeholderTextColor={colors.outline}
               value={newName}
               onChangeText={setNewName}
@@ -126,14 +128,14 @@ export default function ListsScreen() {
             </View>
             <View style={styles.modalActions}>
               <Pressable onPress={() => setModalOpen(false)}>
-                <Text style={[typography.label, { fontSize: 14, color: colors.onSurfaceVariant }]}>Cancel</Text>
+                <Text style={[typography.label, { fontSize: 14, color: colors.onSurfaceVariant }]}>{t('common.cancel')}</Text>
               </Pressable>
               <Pressable
                 style={[styles.createBtn, { backgroundColor: colors.primaryContainer }, !newName.trim() && { opacity: 0.5 }]}
                 onPress={handleCreate}
                 disabled={!newName.trim() || creating}
               >
-                <Text style={[typography.label, { fontSize: 14, color: colors.onPrimaryContainer }]}>{creating ? 'Creating…' : 'Create'}</Text>
+                <Text style={[typography.label, { fontSize: 14, color: colors.onPrimaryContainer }]}>{creating ? t('common.loading') : t('lists.createList')}</Text>
               </Pressable>
             </View>
           </View>

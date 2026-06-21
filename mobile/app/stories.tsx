@@ -4,6 +4,7 @@ import { showError } from '../src/lib/toast';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { fetchStories, deleteStory, PhotoStory } from '../src/lib/library-service';
 import { useTheme } from '../src/theme/theme-context';
+import { useLocale } from '../src/lib/locale-react-context';
 import { spacing, radius, typography, makeShadow } from '../src/theme/theme';
 import { Icon } from '../src/theme/ui-primitives';
 import { AppHeader } from '../src/components/app-header';
@@ -11,6 +12,7 @@ import { AppHeader } from '../src/components/app-header';
 export default function StoriesScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { t } = useLocale();
   const [stories, setStories] = useState<PhotoStory[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -27,10 +29,10 @@ export default function StoriesScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const confirmDelete = (story: PhotoStory) => {
-    Alert.alert('Delete story', `Delete "${story.title}"?`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('stories.title'), `${t('common.delete')} "${story.title}"?`, [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           try {
@@ -47,7 +49,7 @@ export default function StoriesScreen() {
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <AppHeader title="Photo Stories" showBack />
+        <AppHeader title={t('stories.title')} showBack />
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><ActivityIndicator size="large" color={colors.primary} /></View>
       </View>
     );
@@ -55,7 +57,7 @@ export default function StoriesScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <AppHeader title="Photo Stories" showBack />
+      <AppHeader title={t('stories.title')} showBack />
       <FlatList
         data={stories}
         keyExtractor={(s) => s.id}
@@ -63,7 +65,7 @@ export default function StoriesScreen() {
         ListEmptyComponent={
           <View style={{ alignItems: 'center', marginTop: 80 }}>
             <Icon name="auto-stories" size={44} color={colors.outline} />
-            <Text style={[typography.body, { color: colors.onSurfaceVariant, textAlign: 'center', marginTop: spacing.md }]}>No stories yet. Group your photos into a story!</Text>
+            <Text style={[typography.body, { color: colors.onSurfaceVariant, textAlign: 'center', marginTop: spacing.md }]}>{t('stories.empty')}</Text>
           </View>
         }
         renderItem={({ item }) => (
@@ -89,7 +91,7 @@ export default function StoriesScreen() {
       />
       <Pressable style={[styles.fab, { backgroundColor: colors.primaryContainer, ...makeShadow(colors, 'jade') }]} onPress={() => router.push('/story-create')}>
         <Icon name="add" size={20} color={colors.onPrimaryContainer} />
-        <Text style={[typography.label, { fontSize: 14, color: colors.onPrimaryContainer }]}>New Story</Text>
+        <Text style={[typography.label, { fontSize: 14, color: colors.onPrimaryContainer }]}>{t('stories.newStory')}</Text>
       </Pressable>
     </View>
   );

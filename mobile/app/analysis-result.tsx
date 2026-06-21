@@ -10,12 +10,9 @@ import { fetchLists, VocabularyList } from '../src/lib/library-service';
 import { SaveToListSheet } from '../src/components/save-to-list-sheet';
 import { showError } from '../src/lib/toast';
 import { useTheme } from '../src/theme/theme-context';
+import { useLocale } from '../src/lib/locale-react-context';
 import { spacing, radius, typography, fonts, makeShadow } from '../src/theme/theme';
 import { Icon, Eyebrow } from '../src/theme/ui-primitives';
-
-const CATEGORY_LABELS: Record<string, string> = {
-  object: 'Objects', color: 'Colors', action: 'Actions',
-};
 
 function WordCard({
   word, canSave, saved, saving, onSavePress,
@@ -27,6 +24,7 @@ function WordCard({
   onSavePress: (word: DetectedWord) => void;
 }) {
   const { colors } = useTheme();
+  const { t } = useLocale();
 
   return (
     <View style={[styles.wordCard, { backgroundColor: colors.surface, borderColor: colors.surfaceContainerHigh, ...makeShadow(colors, 'card') }]}>
@@ -76,6 +74,7 @@ export default function AnalysisResultScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { colors } = useTheme();
+  const { t } = useLocale();
   const insets = useSafeAreaInsets();
   const result = getLatestAnalysisResult();
   const [lists, setLists] = useState<VocabularyList[]>([]);
@@ -107,9 +106,9 @@ export default function AnalysisResultScreen() {
   if (!result) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <Text style={[typography.body, { color: colors.onSurfaceVariant }]}>No analysis to show.</Text>
+        <Text style={[typography.body, { color: colors.onSurfaceVariant }]}>{t('analysis.noResult')}</Text>
         <Pressable onPress={() => router.back()}>
-          <Text style={[typography.label, { color: colors.primary, fontSize: 14, marginTop: spacing.sm }]}>Go back</Text>
+          <Text style={[typography.label, { color: colors.primary, fontSize: 14, marginTop: spacing.sm }]}>{t('analysis.goBack')}</Text>
         </Pressable>
       </View>
     );
@@ -135,13 +134,13 @@ export default function AnalysisResultScreen() {
         <View style={[styles.overlayRow, { top: insets.top + 8 }]}>
           <View style={[styles.pill, { backgroundColor: 'rgba(255,255,255,0.85)' }]}>
             <Icon name="visibility" size={16} color={colors.primary} />
-            <Text style={[typography.label, { color: '#191c1d' }]}>{result.words.length} detected</Text>
+            <Text style={[typography.label, { color: '#191c1d' }]}>{t('analysis.detected', { count: result.words.length })}</Text>
           </View>
           {result.usage && (
             <View style={[styles.pill, { backgroundColor: colors.primaryContainer }]}>
               <Icon name="analytics" size={16} color={colors.onPrimaryContainer} />
               <Text style={[typography.label, { color: colors.onPrimaryContainer }]}>
-                {result.usage.remaining}/{result.usage.limit} left
+                {t('analysis.remaining', { remaining: result.usage.remaining, limit: result.usage.limit })}
               </Text>
             </View>
           )}
@@ -162,18 +161,18 @@ export default function AnalysisResultScreen() {
           </Pressable>
         ) : null}
 
-        <Text style={[typography.headline, { color: colors.onSurface, marginVertical: spacing.md }]}>Analysis Results</Text>
+        <Text style={[typography.headline, { color: colors.onSurface, marginVertical: spacing.md }]}>{t('analysis.title')}</Text>
 
         {!user && (
           <Pressable style={[styles.loginBanner, { backgroundColor: colors.primarySoft, borderColor: colors.primaryFixed }]} onPress={() => router.push('/(auth)/login')}>
             <Icon name="lock" size={18} color={colors.primary} />
-            <Text style={[typography.body, { color: colors.primary, flex: 1 }]}>Log in to save these words</Text>
+            <Text style={[typography.body, { color: colors.primary, flex: 1 }]}>{t('analysis.loginToSave')}</Text>
           </Pressable>
         )}
 
         {byCategory.map(({ cat, words }) => (
           <View key={cat} style={{ marginBottom: spacing.lg }}>
-            <Eyebrow style={{ marginBottom: spacing.sm }}>{CATEGORY_LABELS[cat]}</Eyebrow>
+            <Eyebrow style={{ marginBottom: spacing.sm }}>{cat === 'object' ? t('analysis.categoryObjects') : cat === 'color' ? t('analysis.categoryColors') : t('analysis.categoryActions')}</Eyebrow>
             <View style={{ gap: spacing.sm }}>
               {words.map((word) => (
                 <WordCard
