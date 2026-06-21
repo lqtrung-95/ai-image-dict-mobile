@@ -11,7 +11,7 @@ const RC_API_KEY_IOS = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY ?? '';
 const RC_API_KEY_ANDROID = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY ?? '';
 
 // The entitlement ID configured in the RevenueCat dashboard
-export const PREMIUM_ENTITLEMENT = 'premium';
+export const PREMIUM_ENTITLEMENT = 'Snap Mandarin Pro';
 
 let initialized = false;
 

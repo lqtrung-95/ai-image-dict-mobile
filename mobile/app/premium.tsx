@@ -9,34 +9,22 @@ import { usePremium } from '../src/lib/premium-context';
 import { useTheme } from '../src/theme/theme-context';
 import { spacing, radius, typography, fonts, makeShadow } from '../src/theme/theme';
 import { AppHeader } from '../src/components/app-header';
-
-const FEATURES = [
-  { icon: 'all-inclusive' as const, title: 'Unlimited Photo Analyses', desc: 'Analyze as many photos as you want, every day.' },
-  { icon: 'quiz' as const, title: 'All Quiz Modes', desc: 'Multiple choice, listening, pinyin master & more.' },
-  { icon: 'draw' as const, title: 'Handwriting Practice', desc: 'Trace characters stroke by stroke with AI feedback.' },
-  { icon: 'extension' as const, title: 'Mini Games', desc: 'Character Match, Speed Quiz, and future games.' },
-  { icon: 'auto-stories' as const, title: 'Story Generation', desc: 'Unlimited AI stories from your photo vocabulary.' },
-  { icon: 'bolt' as const, title: 'Priority AI Speed', desc: 'Faster analysis and story generation.' },
-];
-
-function packageLabel(pkg: PurchasesPackage): { period: string; price: string; sub: string; savings?: string } {
-  const price = pkg.product.priceString;
-  switch (pkg.packageType) {
-    case PACKAGE_TYPE.ANNUAL:
-      return { period: 'Annual', price, sub: 'per year', savings: 'save 43%' };
-    case PACKAGE_TYPE.MONTHLY:
-      return { period: 'Monthly', price, sub: 'per month' };
-    case PACKAGE_TYPE.WEEKLY:
-      return { period: 'Weekly', price, sub: 'per week' };
-    default:
-      return { period: pkg.product.title, price, sub: '' };
-  }
-}
+import { useLocale } from '../src/lib/locale-react-context';
 
 export default function PremiumScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const { isPremiumUser, refresh } = usePremium();
+  const { t } = useLocale();
+
+  const FEATURES = [
+    { icon: 'all-inclusive' as const, title: t('premium.featurePhotosTitle'), desc: t('premium.featurePhotosDesc') },
+    { icon: 'quiz' as const, title: t('premium.featureQuizTitle'), desc: t('premium.featureQuizDesc') },
+    { icon: 'draw' as const, title: t('premium.featureHandwritingTitle'), desc: t('premium.featureHandwritingDesc') },
+    { icon: 'extension' as const, title: t('premium.featureGamesTitle'), desc: t('premium.featureGamesDesc') },
+    { icon: 'auto-stories' as const, title: t('premium.featureStoryTitle'), desc: t('premium.featureStoryDesc') },
+    { icon: 'bolt' as const, title: t('premium.featureSpeedTitle'), desc: t('premium.featureSpeedDesc') },
+  ];
 
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
   const [selected, setSelected] = useState<PurchasesPackage | null>(null);
@@ -47,12 +35,27 @@ export default function PremiumScreen() {
   useEffect(() => {
     getOfferings().then((pkgs) => {
       setPackages(pkgs);
-      // Pre-select annual if available, otherwise first package
       const annual = pkgs.find((p) => p.packageType === PACKAGE_TYPE.ANNUAL);
       setSelected(annual ?? pkgs[0] ?? null);
       setLoadingPkgs(false);
     });
   }, []);
+
+  function packageLabel(pkg: PurchasesPackage): { period: string; price: string; sub: string; savings?: string } {
+    const price = pkg.product.priceString;
+    switch (pkg.packageType) {
+      case PACKAGE_TYPE.ANNUAL:
+        return { period: t('premium.periodAnnual'), price, sub: t('premium.subPerYear'), savings: t('premium.savingsBadge') };
+      case PACKAGE_TYPE.MONTHLY:
+        return { period: t('premium.periodMonthly'), price, sub: t('premium.subPerMonth') };
+      case PACKAGE_TYPE.WEEKLY:
+        return { period: t('premium.periodWeekly'), price, sub: t('premium.subPerWeek') };
+      case PACKAGE_TYPE.LIFETIME:
+        return { period: t('premium.periodLifetime'), price, sub: t('premium.subOneTime') };
+      default:
+        return { period: pkg.product.title, price, sub: '' };
+    }
+  }
 
   const handlePurchase = async () => {
     if (!selected) return;
@@ -61,14 +64,13 @@ export default function PremiumScreen() {
       const info = await purchasePackage(selected);
       await refresh();
       if (isPremium(info)) {
-        Alert.alert('Welcome to Premium! 🎉', 'All features are now unlocked.', [
-          { text: 'Start learning', onPress: () => router.back() },
+        Alert.alert(t('premium.welcomeTitle'), t('premium.welcomeBody'), [
+          { text: t('premium.startLearning'), onPress: () => router.back() },
         ]);
       }
     } catch (err: any) {
-      // userCancelled has code 1 — don't show an error for that
       if (err?.code !== '1' && err?.userCancelled !== true) {
-        Alert.alert('Purchase failed', err?.message ?? 'Something went wrong. Please try again.');
+        Alert.alert(t('premium.purchaseFailed'), err?.message ?? t('premium.purchaseError'));
       }
     } finally {
       setPurchasing(false);
@@ -81,14 +83,14 @@ export default function PremiumScreen() {
       const info = await restorePurchases();
       await refresh();
       if (isPremium(info)) {
-        Alert.alert('Premium restored!', 'Your subscription has been restored.', [
-          { text: 'Continue', onPress: () => router.back() },
+        Alert.alert(t('premium.premiumRestored'), t('premium.restoreSuccess'), [
+          { text: t('premium.continueBtn'), onPress: () => router.back() },
         ]);
       } else {
-        Alert.alert('No active subscription', 'We could not find an active premium subscription for your account.');
+        Alert.alert(t('premium.noSubscription'), t('premium.noSubscriptionBody'));
       }
     } catch {
-      Alert.alert('Restore failed', 'Please try again later.');
+      Alert.alert(t('premium.restoreFailed'), t('premium.restoreFailedBody'));
     } finally {
       setRestoring(false);
     }
@@ -97,18 +99,18 @@ export default function PremiumScreen() {
   if (isPremiumUser) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <AppHeader title="Premium" showBack />
+        <AppHeader title={t('premium.title')} showBack />
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.md, padding: spacing.xl }}>
           <Text style={{ fontSize: 56 }}>👑</Text>
-          <Text style={[styles.heroTitle, { color: colors.onSurface }]}>You're Premium!</Text>
+          <Text style={[styles.heroTitle, { color: colors.onSurface }]}>{t('premium.youArePremium')}</Text>
           <Text style={[typography.body, { color: colors.onSurfaceVariant, textAlign: 'center' }]}>
-            All features are unlocked. Thank you for supporting Snap Mandarin.
+            {t('premium.premiumUnlocked')}
           </Text>
           <Pressable
             style={[styles.cta, { backgroundColor: colors.primary, marginTop: spacing.md }]}
             onPress={() => router.back()}
           >
-            <Text style={[typography.label, { fontSize: 15, color: colors.onPrimary }]}>Back to app</Text>
+            <Text style={[typography.label, { fontSize: 15, color: colors.onPrimary }]}>{t('premium.backToApp')}</Text>
           </Pressable>
         </View>
       </View>
@@ -117,28 +119,26 @@ export default function PremiumScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <AppHeader title="Premium" showBack />
+      <AppHeader title={t('premium.title')} showBack />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
-        {/* Hero */}
         <View style={[styles.hero, { backgroundColor: colors.primary }]}>
           <Text style={{ fontSize: 44 }}>👑</Text>
-          <Text style={[styles.heroTitle, { color: colors.onPrimary }]}>Snap Mandarin Premium</Text>
+          <Text style={[styles.heroTitle, { color: colors.onPrimary }]}>{t('premium.heroTitle')}</Text>
           <Text style={[typography.body, { color: colors.onPrimary, opacity: 0.85, textAlign: 'center' }]}>
-            Everything you need to master Chinese — unlimited and ad-free.
+            {t('premium.heroSub')}
           </Text>
         </View>
 
-        {/* Plan selector */}
         {loadingPkgs ? (
           <View style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
             <ActivityIndicator color={colors.primary} />
-            <Text style={[typography.body, { color: colors.outline, marginTop: spacing.sm }]}>Loading plans…</Text>
+            <Text style={[typography.body, { color: colors.outline, marginTop: spacing.sm }]}>{t('premium.loadingPlans')}</Text>
           </View>
         ) : packages.length === 0 ? (
           <View style={[styles.noPkgs, { backgroundColor: colors.surface }]}>
             <Text style={[typography.body, { color: colors.onSurfaceVariant, textAlign: 'center' }]}>
-              Plans unavailable right now. Please try again later.
+              {t('premium.plansUnavailable')}
             </Text>
           </View>
         ) : (
@@ -172,7 +172,7 @@ export default function PremiumScreen() {
                   <Text style={[typography.label, { fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, color: isSelected ? colors.onPrimary : colors.outline, opacity: isSelected ? 0.85 : 1 }]}>
                     {period}
                   </Text>
-                  <Text style={[styles.price, { color: isSelected ? colors.onPrimary : colors.onSurface }]}>{price}</Text>
+                  <Text style={[styles.price, { color: isSelected ? colors.onPrimary : colors.onSurface }]} numberOfLines={1} adjustsFontSizeToFit>{price}</Text>
                   <Text style={[typography.body, { fontSize: 12, color: isSelected ? colors.onPrimary : colors.outline, opacity: isSelected ? 0.8 : 1 }]}>{sub}</Text>
                   {isSelected && (
                     <View style={[styles.checkBadge, { backgroundColor: colors.onPrimary }]}>
@@ -185,8 +185,7 @@ export default function PremiumScreen() {
           </View>
         )}
 
-        {/* Feature list */}
-        <Text style={[typography.heading, { color: colors.onSurface, marginBottom: spacing.sm }]}>What's included</Text>
+        <Text style={[typography.heading, { color: colors.onSurface, marginBottom: spacing.sm }]}>{t('premium.whatsIncluded')}</Text>
         <View style={[styles.featureCard, { backgroundColor: colors.surface, ...makeShadow(colors, 'card') }]}>
           {FEATURES.map((f, i) => (
             <View key={f.title}>
@@ -205,7 +204,6 @@ export default function PremiumScreen() {
           ))}
         </View>
 
-        {/* CTA */}
         <Pressable
           style={({ pressed }) => [
             styles.cta,
@@ -218,23 +216,23 @@ export default function PremiumScreen() {
             <ActivityIndicator color={colors.onPrimary} />
           ) : (
             <Text style={[typography.label, { fontSize: 16, color: colors.onPrimary }]}>
-              {selected ? `Subscribe — ${packageLabel(selected).price}/${packageLabel(selected).sub.split(' ')[1] ?? 'mo'}` : 'Select a plan'}
+              {selected ? `Subscribe — ${packageLabel(selected).price}/${packageLabel(selected).sub.split(' ')[1] ?? 'mo'}` : t('premium.selectPlan')}
             </Text>
           )}
         </Pressable>
 
         <Text style={[typography.body, { fontSize: 11, color: colors.outline, textAlign: 'center', paddingHorizontal: spacing.lg }]}>
-          Payment will be charged to your App Store account. Subscription auto-renews unless cancelled at least 24 hours before the end of the current period.
+          {t('premium.paymentDisclaimer')}
         </Text>
 
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: spacing.xl }}>
           <Pressable onPress={handleRestore} disabled={restoring}>
             <Text style={[typography.label, { fontSize: 13, color: colors.primary }]}>
-              {restoring ? 'Restoring…' : 'Restore purchases'}
+              {restoring ? t('premium.restoring') : t('premium.restorePurchases')}
             </Text>
           </Pressable>
           <Pressable onPress={() => router.back()}>
-            <Text style={[typography.body, { fontSize: 13, color: colors.outline }]}>Maybe later</Text>
+            <Text style={[typography.body, { fontSize: 13, color: colors.outline }]}>{t('premium.maybeLater')}</Text>
           </Pressable>
         </View>
 
@@ -252,11 +250,11 @@ const styles = StyleSheet.create({
   planCardAnnual: { paddingTop: spacing.lg + 4 },
   bestBadge: { position: 'absolute', top: -10, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 3 },
   checkBadge: { position: 'absolute', bottom: spacing.sm, right: spacing.sm, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
-  price: { fontFamily: fonts.headlineSemi, fontSize: 28 },
+  price: { fontFamily: fonts.headlineSemi, fontSize: 22, textAlign: 'center' },
   noPkgs: { borderRadius: radius.lg, padding: spacing.xl, alignItems: 'center' },
   featureCard: { borderRadius: radius.lg, overflow: 'hidden' },
   featureRow: { flexDirection: 'row', alignItems: 'center', padding: spacing.md, gap: spacing.md },
   featureIcon: { width: 40, height: 40, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
   divider: { height: StyleSheet.hairlineWidth, marginLeft: 40 + spacing.md * 2 },
-  cta: { borderRadius: radius.pill, paddingVertical: 16, alignItems: 'center', justifyContent: 'center', marginTop: spacing.xs },
+  cta: { borderRadius: radius.pill, paddingVertical: 16, paddingHorizontal: spacing.xl, alignItems: 'center', justifyContent: 'center', marginTop: spacing.xs },
 });

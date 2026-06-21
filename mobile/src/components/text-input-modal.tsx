@@ -13,6 +13,7 @@ interface Props {
   initialValue?: string;
   keyboardType?: 'default' | 'number-pad' | 'url';
   submitLabel?: string;
+  cancelLabel?: string;
   onSubmit: (value: string) => void;
   onCancel: () => void;
 }
@@ -20,7 +21,7 @@ interface Props {
 // Cross-platform replacement for iOS-only Alert.prompt.
 export function TextInputModal({
   visible, title, message, placeholder, initialValue = '',
-  keyboardType = 'default', submitLabel = 'Save', onSubmit, onCancel,
+  keyboardType = 'default', submitLabel = 'Save', cancelLabel = 'Cancel', onSubmit, onCancel,
 }: Props) {
   const { colors } = useTheme();
   const [value, setValue] = useState(initialValue);
@@ -47,7 +48,7 @@ export function TextInputModal({
           />
           <View style={styles.actions}>
             <Pressable onPress={onCancel}>
-              <Text style={[typography.label, { color: colors.onSurfaceVariant, fontSize: 14 }]}>Cancel</Text>
+              <Text style={[typography.label, { color: colors.onSurfaceVariant, fontSize: 14 }]}>{cancelLabel}</Text>
             </Pressable>
             <Pressable
               style={[styles.submit, { backgroundColor: colors.primaryContainer }, !value.trim() && { opacity: 0.5 }]}

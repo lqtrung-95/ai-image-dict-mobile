@@ -3,6 +3,7 @@ import { ScrollView, Text, Pressable, View, Alert } from 'react-native';
 import { fetchLists, createList, VocabularyList } from '../lib/library-service';
 import { TextInputModal } from './text-input-modal';
 import { useTheme } from '../theme/theme-context';
+import { useLocale } from '../lib/locale-react-context';
 import { spacing, radius, typography } from '../theme/theme';
 import { Eyebrow } from '../theme/ui-primitives';
 
@@ -14,6 +15,7 @@ interface Props {
 // Horizontal chip row to pick a target list when saving words.
 export function ListPickerRow({ selectedListId, onSelect }: Props) {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const [lists, setLists] = useState<VocabularyList[]>([]);
   const [creatorOpen, setCreatorOpen] = useState(false);
 
@@ -28,7 +30,7 @@ export function ListPickerRow({ selectedListId, onSelect }: Props) {
       setLists((prev) => [created, ...prev]);
       onSelect(created.id);
     } catch {
-      Alert.alert('Create failed', 'Try again');
+      Alert.alert(t('listPicker.createFailed'), t('listPicker.createFailedBody'));
     }
   };
 
@@ -41,10 +43,10 @@ export function ListPickerRow({ selectedListId, onSelect }: Props) {
 
   return (
     <View>
-      <Eyebrow style={{ marginBottom: spacing.sm }}>Save to list (optional)</Eyebrow>
+      <Eyebrow style={{ marginBottom: spacing.sm }}>{t('listPicker.saveToList')}</Eyebrow>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.xs, paddingBottom: 4 }}>
         <Pressable style={chip(selectedListId === null)} onPress={() => onSelect(null)}>
-          <Text style={[typography.pinyin, { color: colors.onSurfaceVariant }]}>No list</Text>
+          <Text style={[typography.pinyin, { color: colors.onSurfaceVariant }]}>{t('listPicker.noList')}</Text>
         </Pressable>
         {lists.map((list) => (
           <Pressable key={list.id} style={chip(selectedListId === list.id)} onPress={() => onSelect(list.id)}>
@@ -53,16 +55,17 @@ export function ListPickerRow({ selectedListId, onSelect }: Props) {
           </Pressable>
         ))}
         <Pressable style={chip(false)} onPress={() => setCreatorOpen(true)}>
-          <Text style={[typography.pinyin, { color: colors.primary }]}>+ New</Text>
+          <Text style={[typography.pinyin, { color: colors.primary }]}>{t('listPicker.newList')}</Text>
         </Pressable>
       </ScrollView>
 
       <TextInputModal
         visible={creatorOpen}
-        title="New List"
-        message="Name your list"
-        placeholder="e.g. Kitchen words"
-        submitLabel="Create"
+        title={t('listPicker.newListTitle')}
+        message={t('listPicker.newListMessage')}
+        placeholder={t('listPicker.newListPlaceholder')}
+        submitLabel={t('lists.createList')}
+        cancelLabel={t('listPicker.cancel')}
         onSubmit={submitNewList}
         onCancel={() => setCreatorOpen(false)}
       />

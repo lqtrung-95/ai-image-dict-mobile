@@ -285,8 +285,9 @@ export default function ProfileScreen() {
 
       <TextInputModal
         visible={nameModalOpen}
-        title="Display name"
-        message="How should we call you?"
+        title={t('profile.displayNameTitle')}
+        message={t('profile.displayNameMessage')}
+        cancelLabel={t('profile.displayNameCancel')}
         initialValue={displayName ?? ''}
         onSubmit={submitName}
         onCancel={() => setNameModalOpen(false)}

@@ -6,6 +6,7 @@ import { createList, VocabularyList } from '../lib/library-service';
 import { showError } from '../lib/toast';
 import { TextInputModal } from './text-input-modal';
 import { useTheme } from '../theme/theme-context';
+import { useLocale } from '../lib/locale-react-context';
 import { spacing, radius, typography, fonts } from '../theme/theme';
 import { Icon } from '../theme/ui-primitives';
 
@@ -25,6 +26,7 @@ interface Props {
 // Lets them save to no list, an existing list, or create a new one inline.
 export function SaveToListSheet({ visible, wordZh, lists, onChoose, onCancel, onListCreated }: Props) {
   const { colors } = useTheme();
+  const { t } = useLocale();
   const insets = useSafeAreaInsets();
   const [creatorOpen, setCreatorOpen] = useState(false);
 
@@ -87,10 +89,11 @@ export function SaveToListSheet({ visible, wordZh, lists, onChoose, onCancel, on
 
       <TextInputModal
         visible={creatorOpen}
-        title="New List"
-        message="Name your list"
-        placeholder="e.g. Kitchen words"
-        submitLabel="Create"
+        title={t('listPicker.newListTitle')}
+        message={t('listPicker.newListMessage')}
+        placeholder={t('listPicker.newListPlaceholder')}
+        submitLabel={t('lists.createList')}
+        cancelLabel={t('listPicker.cancel')}
         onSubmit={submitNewList}
         onCancel={() => setCreatorOpen(false)}
       />

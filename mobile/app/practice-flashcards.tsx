@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../src/lib/auth-context';
 import { LoginRequiredPrompt } from '../src/components/login-required-prompt';
 import { PracticeFlashcard } from '../src/components/practice-flashcard';
 import { PracticeStatusView } from '../src/components/practice-status-view';
+import { FlashcardSwipeOnboardingTip, hasSeenSwipeTip } from '../src/components/flashcard-swipe-onboarding-tip';
 import { AppHeader } from '../src/components/app-header';
 import { fetchDueWords, submitAttempt, DueWord, SrsRating } from '../src/lib/practice-service';
 import { showError } from '../src/lib/toast';
@@ -18,6 +19,7 @@ export default function PracticeScreen() {
   const { user } = useAuth();
   const { course: courseId, title: titleParam } = useLocalSearchParams<{ course?: string; title?: string }>();
   const { colors } = useTheme();
+  const [showSwipeTip, setShowSwipeTip] = useState(false);
   const { t, locale } = useLocale();
   const headerTitle = titleParam ? decodeURIComponent(titleParam) : t('flashcards.title');
   const [state, setState] = useState<SessionState>('loading');
@@ -40,6 +42,11 @@ export default function PracticeScreen() {
         setWords(data.items);
         cardShownAt.current = Date.now();
         setState('practicing');
+        // Show swipe tip on mobile for first-time users
+        if (Platform.OS !== 'web') {
+          const seen = await hasSeenSwipeTip();
+          if (!seen) setShowSwipeTip(true);
+        }
       }
     } catch {
       setState('error');
@@ -125,6 +132,7 @@ export default function PracticeScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <AppHeader title={headerTitle} showBack />
+      {showSwipeTip && <FlashcardSwipeOnboardingTip onDismiss={() => setShowSwipeTip(false)} />}
       <View style={{ flex: 1, padding: spacing.containerMargin }}>
       <View style={styles.progressRow}>
         <Text style={[typography.label, { fontSize: 14, color: colors.onSurfaceVariant }]}>

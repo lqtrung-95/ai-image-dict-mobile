@@ -257,7 +257,7 @@ export default function CourseDetailScreen() {
       <View style={styles.loadMore}>
         <ActivityIndicator size="small" color={colors.primary} />
         <Text style={[typography.label, { fontSize: 12, color: colors.outline, marginLeft: 8 }]}>
-          Loading more words…
+          {t('courseDetail.loadingMore')}
         </Text>
       </View>
     );
@@ -266,7 +266,7 @@ export default function CourseDetailScreen() {
   if (error) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <AppHeader title="Course" showBack />
+        <AppHeader title={t('courseDetail.title')} showBack />
         <View style={styles.centered}>
           <Text style={[typography.body, { color: colors.error }]}>{error}</Text>
         </View>
@@ -277,7 +277,7 @@ export default function CourseDetailScreen() {
   if (!detail) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <AppHeader title="Course" showBack />
+        <AppHeader title={t('courseDetail.title')} showBack />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -305,7 +305,7 @@ export default function CourseDetailScreen() {
         </View>
       </View>
       <Text style={[typography.label, { fontSize: 12.5, color: colors.outline, marginTop: spacing.sm }]}>
-        {total} words · {course.subscriberCount} learners
+        {t('courseDetail.wordsCount', { count: total })} · {t('courseDetail.learnersCount', { count: course.subscriberCount })}
         {course.ratingAvg != null ? ` · ★ ${course.ratingAvg.toFixed(1)}` : ''}
       </Text>
       {course.description ? (
@@ -320,16 +320,16 @@ export default function CourseDetailScreen() {
           <CourseProgressRing learned={learned} total={total} />
           <View style={{ flex: 1 }}>
             <Text style={[typography.body, { color: colors.onSurface, fontFamily: fonts.headlineSemi }]}>
-              {pct}% learned
+              {t('courseDetail.pctLearned', { pct })}
             </Text>
             <View style={{ flexDirection: 'row', gap: 6, marginTop: spacing.sm, flexWrap: 'wrap' }}>
               {due > 0 && (
                 <View style={[styles.chip, { backgroundColor: '#3a2f1a' }]}>
-                  <Text style={[typography.label, { fontSize: 11, color: '#d9a14a' }]}>{due} due today</Text>
+                  <Text style={[typography.label, { fontSize: 11, color: '#d9a14a' }]}>{t('courseDetail.dueToday', { count: due })}</Text>
                 </View>
               )}
               <View style={[styles.chip, { backgroundColor: colors.primarySoft }]}>
-                <Text style={[typography.label, { fontSize: 11, color: colors.primary }]}>{learning} learning</Text>
+                <Text style={[typography.label, { fontSize: 11, color: colors.primary }]}>{t('courseDetail.learningCount', { count: learning })}</Text>
               </View>
             </View>
           </View>
@@ -394,15 +394,15 @@ export default function CourseDetailScreen() {
       <View style={{ marginTop: spacing.sm, marginBottom: spacing.xs }}>
         <Text style={[typography.label, { fontSize: 12, color: colors.outline, marginBottom: spacing.sm }]}>
           {search
-            ? `${wordsPage?.filteredCount ?? filtered.length} of ${total} words`
-            : `${total} words`}
-          {allWords.length < (wordsPage?.filteredCount ?? total) ? ` · showing ${allWords.length}` : ''}
+            ? t('courseDetail.wordsOfTotal', { filtered: wordsPage?.filteredCount ?? filtered.length, total })
+            : t('courseDetail.wordsCount', { count: total })}
+          {allWords.length < (wordsPage?.filteredCount ?? total) ? ` · ${t('courseDetail.showingCount', { count: allWords.length })}` : ''}
         </Text>
         <View style={{ flexDirection: 'row', gap: 7 }}>
-          <FilterPill value="all" label={`All`} />
-          <FilterPill value="new" label={`New ${newCount}`} />
-          <FilterPill value="learning" label={`Learning ${learning}`} color="#d9a14a" />
-          <FilterPill value="mastered" label={`✓ ${learned}`} color={colors.primary} />
+          <FilterPill value="all" label={t('courseDetail.filterAll')} />
+          <FilterPill value="new" label={t('courseDetail.filterNew', { count: newCount })} />
+          <FilterPill value="learning" label={t('courseDetail.filterLearning', { count: learning })} color="#d9a14a" />
+          <FilterPill value="mastered" label={t('courseDetail.filterMastered', { count: learned })} color={colors.primary} />
         </View>
       </View>
     </View>
