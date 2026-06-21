@@ -15,29 +15,32 @@ export function LocaleSwitcherRow() {
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.label, { color: colors.text }]}>{t('settings.language')}</Text>
+      <Text style={[styles.label, { color: colors.onSurface }]}>{t('settings.language')}</Text>
       <View style={styles.options}>
-        {SUPPORTED_LOCALES.map((code) => (
-          <TouchableOpacity
-            key={code}
-            onPress={() => setLocale(code)}
-            style={[
-              styles.option,
-              { borderColor: colors.border, backgroundColor: colors.surface },
-              locale === code && { backgroundColor: colors.primary, borderColor: colors.primary },
-            ]}
-          >
-            <Text
+        {SUPPORTED_LOCALES.map((code) => {
+          const selected = locale === code;
+          return (
+            <TouchableOpacity
+              key={code}
+              onPress={() => setLocale(code)}
               style={[
-                styles.optionText,
-                { color: colors.textSecondary },
-                locale === code && { color: '#ffffff', fontWeight: '700' },
+                styles.option,
+                { borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerHigh },
+                selected && { backgroundColor: colors.primary, borderColor: colors.primary },
               ]}
             >
-              {LOCALE_LABELS[code]}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Text
+                style={[
+                  styles.optionText,
+                  { color: colors.onSurfaceVariant },
+                  selected && { color: colors.onPrimary, fontWeight: '700' },
+                ]}
+              >
+                {LOCALE_LABELS[code]}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
     </View>
   );

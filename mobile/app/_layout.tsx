@@ -19,6 +19,7 @@ import { configureNotificationHandler, syncReminderOnLaunch } from '../src/lib/n
 import { ONBOARDING_DONE_KEY } from './onboarding';
 import { initPurchases } from '../src/lib/purchases-service';
 import { PremiumProvider, usePremium } from '../src/lib/premium-context';
+import { LocaleProvider } from '../src/lib/locale-react-context';
 
 SplashScreen.preventAutoHideAsync();
 configureNotificationHandler();
@@ -33,6 +34,7 @@ function RootNavigator() {
   const router = useRouter();
   const [onboardingChecked, setOnboardingChecked] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [onboardingRedirected, setOnboardingRedirected] = useState(false);
   const prevUserId = useRef<string | null>(null);
 
   // Sync RevenueCat user identity whenever auth state changes
@@ -64,6 +66,9 @@ function RootNavigator() {
   useEffect(() => {
     if (ready && needsOnboarding) {
       router.replace('/onboarding');
+      // Mark redirected so overlay stays up until after navigation fires,
+      // preventing the home screen from flashing before onboarding appears.
+      setOnboardingRedirected(true);
     }
   }, [ready, needsOnboarding]);
 
@@ -99,7 +104,9 @@ function RootNavigator() {
 
         {/* Overlays render on top of the mounted Stack instead of replacing it,
             which avoids unmounting/remounting the navigator (the flash). */}
-        {!ready && (
+        {/* Keep overlay visible until ready AND (no onboarding needed OR redirect already fired).
+            Without this, the home screen flashes for one frame before router.replace fires. */}
+        {(!ready || (needsOnboarding && !onboardingRedirected)) && (
           <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }]}>
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
@@ -134,13 +141,15 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <PremiumProvider>
-          <NetworkProvider>
-            <RootNavigator />
-          </NetworkProvider>
-        </PremiumProvider>
-      </AuthProvider>
+      <LocaleProvider>
+        <AuthProvider>
+          <PremiumProvider>
+            <NetworkProvider>
+              <RootNavigator />
+            </NetworkProvider>
+          </PremiumProvider>
+        </AuthProvider>
+      </LocaleProvider>
     </ThemeProvider>
   );
 }
