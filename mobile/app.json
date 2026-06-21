@@ -24,7 +24,7 @@
     },
     "android": {
       "package": "com.lqtrung95.snapmandarin",
-      "versionCode": 1,
+      "versionCode": 3,
       "adaptiveIcon": {
         "backgroundColor": "#131313",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -50,7 +50,8 @@
       "expo-splash-screen",
       "expo-notifications",
       "expo-font",
-      "expo-image-picker"
+      "expo-image-picker",
+      "expo-localization"
     ],
     "scheme": "aiimagedict",
     "extra": {
