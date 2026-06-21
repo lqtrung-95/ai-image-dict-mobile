@@ -24,7 +24,7 @@
     },
     "android": {
       "package": "com.lqtrung95.snapmandarin",
-      "versionCode": 6,
+      "versionCode": 7,
       "adaptiveIcon": {
         "backgroundColor": "#131313",
         "foregroundImage": "./assets/android-icon-foreground.png",
