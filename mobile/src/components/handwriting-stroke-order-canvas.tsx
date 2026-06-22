@@ -1,10 +1,12 @@
 /**
  * HandwritingStrokeOrderCanvas
  *
- * Enhanced handwriting canvas that validates stroke order against
- * hanzi-writer-data reference paths, beautifies matched strokes by
- * replacing freehand lines with clean SVG paths, and renders an
- * animated stroke-by-stroke visual guide that the user can toggle.
+ * Validates stroke order against hanzi-writer-data reference paths,
+ * beautifies matched strokes with clean SVG paths, and shows an animated
+ * visual guide for the next expected stroke (togglable).
+ *
+ * After 3 consecutive wrong strokes the next expected stroke is highlighted
+ * prominently as a hint.
  */
 import React, {
   forwardRef,
@@ -37,31 +39,24 @@ export interface HandwritingStrokeOrderCanvasHandle {
   clear: () => void;
   undo: () => void;
   strokeCount: () => number;
-  /** Number of correctly ordered strokes drawn so far */
   correctStrokeCount: () => number;
 }
 
 export type StrokeResult = 'correct' | 'wrong' | null;
 
 interface Props {
-  /** Target character to trace */
   guide: string;
-  /** Show the solid reference character after user is done */
   revealed?: boolean;
-  /** Whether to show the animated stroke-order guide overlay */
   showGuide?: boolean;
-  /** Called when stroke count changes */
   onStrokesChange?: (count: number) => void;
-  /** Called after each stroke attempt with result */
   onStrokeResult?: (result: StrokeResult, correctSoFar: number, total: number) => void;
-  /** Called when all strokes for this character are completed correctly */
   onCharacterComplete?: () => void;
 }
 
 function pointsToPath(points: { x: number; y: number }[]): string {
   if (points.length === 0) return '';
   if (points.length === 1) {
-    const { x, y } = points[0];
+    const { x, y } = points[0]!;
     return `M ${x} ${y} L ${x + 0.1} ${y + 0.1}`;
   }
   return points.reduce(
@@ -70,59 +65,44 @@ function pointsToPath(points: { x: number; y: number }[]): string {
   );
 }
 
-/** A completed stroke: either freehand (wrong) or beautified (reference path). */
 interface DrawnStroke {
   path: string;
   correct: boolean;
 }
 
-const GUIDE_STROKE_DURATION = 600; // ms per stroke in guide animation
-const GUIDE_STROKE_PAUSE = 300;    // ms pause between strokes
+const HINT_AFTER_WRONG = 3; // show strong hint after this many consecutive wrong strokes
 
 export const HandwritingStrokeOrderCanvas = forwardRef<
   HandwritingStrokeOrderCanvasHandle,
   Props
 >(
-  (
-    {
-      guide,
-      revealed = false,
-      showGuide = false,
-      onStrokesChange,
-      onStrokeResult,
-      onCharacterComplete,
-    },
-    ref
-  ) => {
+  ({ guide, revealed = false, showGuide = false, onStrokesChange, onStrokeResult, onCharacterComplete }, ref) => {
     const { colors } = useTheme();
     const [size, setSize] = useState(0);
-
-    // Stroke order reference data for the current character
     const [strokeData, setStrokeData] = useState<StrokeData | null>(null);
-    // Normalised reference paths (scaled to canvas size)
     const [normPaths, setNormPaths] = useState<string[]>([]);
-
-    // Drawing state
     const [drawn, setDrawn] = useState<DrawnStroke[]>([]);
     const [current, setCurrent] = useState<{ x: number; y: number }[]>([]);
     const currentRef = useRef<{ x: number; y: number }[]>([]);
     const correctCountRef = useRef(0);
+    const consecutiveWrongRef = useRef(0);
+    const [showHint, setShowHint] = useState(false);
 
-    // Flash feedback overlay
+    // Flash overlay
     const flashOpacity = useRef(new Animated.Value(0)).current;
     const [flashColor, setFlashColor] = useState('transparent');
 
-    // Guide animation state
-    const [guideStrokeIndex, setGuideStrokeIndex] = useState(0);
-    const [guideProgress, setGuideProgress] = useState(0); // 0→1 for current stroke
-    const guideAnimRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const guideProgressAnim = useRef(new Animated.Value(0)).current;
+    // Guide pulse animation for the next expected stroke
+    const guidePulse = useRef(new Animated.Value(0.4)).current;
 
-    // Fetch stroke data when character changes (async CDN load)
+    // Fetch stroke data when character changes
     useEffect(() => {
       setStrokeData(null);
+      setNormPaths([]);
       setDrawn([]);
+      setShowHint(false);
       correctCountRef.current = 0;
+      consecutiveWrongRef.current = 0;
       setCurrent([]);
       currentRef.current = [];
       let cancelled = false;
@@ -137,133 +117,96 @@ export const HandwritingStrokeOrderCanvas = forwardRef<
       setNormPaths(strokeData.rawPaths.map((p) => normalizeStrokePath(p, size)));
     }, [strokeData, size]);
 
-    // Reset guide animation when guide or showGuide changes
+    // Pulsing animation for the next-stroke guide/hint
     useEffect(() => {
-      if (guideAnimRef.current) clearTimeout(guideAnimRef.current);
-      setGuideStrokeIndex(0);
-      guideProgressAnim.setValue(0);
-    }, [guide, showGuide]);
+      if ((!showGuide && !showHint) || normPaths.length === 0) return;
+      const loop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(guidePulse, { toValue: 0.85, duration: 600, useNativeDriver: false }),
+          Animated.timing(guidePulse, { toValue: 0.30, duration: 600, useNativeDriver: false }),
+        ])
+      );
+      loop.start();
+      return () => loop.stop();
+    }, [showGuide, showHint, normPaths.length, guidePulse]);
 
-    // Animate guide strokes in a loop
-    useEffect(() => {
-      if (!showGuide || normPaths.length === 0 || size === 0) return;
+    const triggerFlash = useCallback((color: string) => {
+      setFlashColor(color);
+      flashOpacity.setValue(0.35);
+      Animated.timing(flashOpacity, { toValue: 0, duration: 500, useNativeDriver: true }).start();
+    }, [flashOpacity]);
 
-      let strokeIdx = 0;
-      let cancelled = false;
+    const panResponder = useMemo(() =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onPanResponderGrant: (e) => {
+          const { locationX, locationY } = e.nativeEvent;
+          currentRef.current = [{ x: locationX, y: locationY }];
+          setCurrent([...currentRef.current]);
+        },
+        onPanResponderMove: (e) => {
+          const { locationX, locationY } = e.nativeEvent;
+          currentRef.current = [...currentRef.current, { x: locationX, y: locationY }];
+          setCurrent([...currentRef.current]);
+        },
+        onPanResponderRelease: () => {
+          const pts = currentRef.current;
+          currentRef.current = [];
+          setCurrent([]);
+          if (pts.length === 0) return;
 
-      const animateNext = () => {
-        if (cancelled) return;
-        guideProgressAnim.setValue(0);
-        setGuideStrokeIndex(strokeIdx);
+          const expectedIdx = correctCountRef.current;
 
-        Animated.timing(guideProgressAnim, {
-          toValue: 1,
-          duration: GUIDE_STROKE_DURATION,
-          useNativeDriver: false,
-        }).start(() => {
-          if (cancelled) return;
-          strokeIdx = (strokeIdx + 1) % normPaths.length;
-          guideAnimRef.current = setTimeout(animateNext, GUIDE_STROKE_PAUSE);
-        });
-      };
+          // Fallback: no stroke data → accept everything as freehand
+          if (!strokeData || expectedIdx >= strokeData.rawPaths.length) {
+            const path = pointsToPath(pts);
+            if (path) setDrawn((prev) => { const next = [...prev, { path, correct: true }]; onStrokesChange?.(next.length); return next; });
+            return;
+          }
 
-      animateNext();
-      return () => {
-        cancelled = true;
-        if (guideAnimRef.current) clearTimeout(guideAnimRef.current);
-        guideProgressAnim.stopAnimation();
-      };
-    }, [showGuide, normPaths, size]);
+          const refPath = strokeData.rawPaths[expectedIdx]!;
+          const refDir = strokeData.directions[expectedIdx]!;
+          const isMatch = strokeMatches(pts, refDir, refPath, size);
 
-    const triggerFlash = useCallback(
-      (color: string) => {
-        setFlashColor(color);
-        flashOpacity.setValue(0.35);
-        Animated.timing(flashOpacity, {
-          toValue: 0,
-          duration: 500,
-          useNativeDriver: true,
-        }).start();
-      },
-      [flashOpacity]
-    );
+          if (isMatch) {
+            const beautified = normPaths[expectedIdx] ?? pointsToPath(pts);
+            correctCountRef.current += 1;
+            consecutiveWrongRef.current = 0;
+            setShowHint(false);
+            triggerFlash(colors.primary);
 
-    const panResponder = useMemo(
-      () =>
-        PanResponder.create({
-          onStartShouldSetPanResponder: () => true,
-          onMoveShouldSetPanResponder: () => true,
-          onPanResponderGrant: (e) => {
-            const { locationX, locationY } = e.nativeEvent;
-            currentRef.current = [{ x: locationX, y: locationY }];
-            setCurrent(currentRef.current);
-          },
-          onPanResponderMove: (e) => {
-            const { locationX, locationY } = e.nativeEvent;
-            currentRef.current = [...currentRef.current, { x: locationX, y: locationY }];
-            setCurrent(currentRef.current);
-          },
-          onPanResponderRelease: () => {
-            const pts = currentRef.current;
-            currentRef.current = [];
-            setCurrent([]);
+            setDrawn((prev) => {
+              const next = [...prev, { path: beautified, correct: true }];
+              onStrokesChange?.(next.length);
+              return next;
+            });
 
-            if (pts.length === 0) return;
+            const total = strokeData.rawPaths.length;
+            onStrokeResult?.('correct', correctCountRef.current, total);
+            if (correctCountRef.current >= total) onCharacterComplete?.();
+          } else {
+            consecutiveWrongRef.current += 1;
+            if (consecutiveWrongRef.current >= HINT_AFTER_WRONG) setShowHint(true);
 
-            const expectedIdx = correctCountRef.current;
+            triggerFlash(colors.error);
+            onStrokeResult?.('wrong', correctCountRef.current, strokeData.rawPaths.length);
 
-            // No stroke data means we fall back to freehand-only mode
-            if (!strokeData || expectedIdx >= strokeData.rawPaths.length) {
-              const path = pointsToPath(pts);
-              if (path) {
-                setDrawn((prev) => {
-                  const next = [...prev, { path, correct: true }];
-                  onStrokesChange?.(next.length);
-                  return next;
-                });
-              }
-              return;
-            }
-
-            const refPath = strokeData.rawPaths[expectedIdx];
-            const refDir = strokeData.directions[expectedIdx];
-            const isMatch = strokeMatches(pts, refDir, refPath, size);
-
-            if (isMatch) {
-              // Beautify: replace freehand with clean reference path
-              const beautified = normPaths[expectedIdx] ?? pointsToPath(pts);
-              correctCountRef.current += 1;
-              triggerFlash(colors.primary);
-
+            // Show wrong stroke in red briefly — clear it after 800ms
+            const path = pointsToPath(pts);
+            if (path) {
               setDrawn((prev) => {
-                const next = [...prev, { path: beautified, correct: true }];
+                const next = [...prev, { path, correct: false }];
                 onStrokesChange?.(next.length);
                 return next;
               });
-
-              const total = strokeData.rawPaths.length;
-              onStrokeResult?.('correct', correctCountRef.current, total);
-
-              if (correctCountRef.current >= total) {
-                onCharacterComplete?.();
-              }
-            } else {
-              // Wrong stroke: show red freehand stroke briefly
-              const path = pointsToPath(pts);
-              triggerFlash(colors.error);
-              onStrokeResult?.('wrong', correctCountRef.current, strokeData.rawPaths.length);
-
-              if (path) {
-                setDrawn((prev) => {
-                  const next = [...prev, { path, correct: false }];
-                  onStrokesChange?.(next.length);
-                  return next;
-                });
-              }
+              setTimeout(() => {
+                setDrawn((prev) => prev.filter((s) => s.correct));
+              }, 800);
             }
-          },
-        }),
-      // Stable: handlers use refs/callbacks that don't change identity
+          }
+        },
+      }),
       // eslint-disable-next-line react-hooks/exhaustive-deps
       [strokeData, normPaths, size, colors]
     );
@@ -274,15 +217,15 @@ export const HandwritingStrokeOrderCanvas = forwardRef<
         setCurrent([]);
         setDrawn([]);
         correctCountRef.current = 0;
+        consecutiveWrongRef.current = 0;
+        setShowHint(false);
         onStrokesChange?.(0);
       },
       undo: () => {
         setDrawn((prev) => {
+          const last = prev[prev.length - 1];
+          if (last?.correct) correctCountRef.current = Math.max(0, correctCountRef.current - 1);
           const next = prev.slice(0, -1);
-          // Rewind correct count if last stroke was correct
-          if (prev[prev.length - 1]?.correct) {
-            correctCountRef.current = Math.max(0, correctCountRef.current - 1);
-          }
           onStrokesChange?.(next.length);
           return next;
         });
@@ -302,9 +245,10 @@ export const HandwritingStrokeOrderCanvas = forwardRef<
       </>
     );
 
-    // Stroke counter badge (e.g. "3 / 8")
     const totalStrokes = strokeData?.rawPaths.length ?? 0;
-    const showCounter = totalStrokes > 0;
+    // Index of the next stroke to draw
+    const nextStrokePath = normPaths[correctCountRef.current];
+    const showNextStrokeGuide = (showGuide || showHint) && !!nextStrokePath;
 
     return (
       <View style={{ width: '100%', aspectRatio: 1 }}>
@@ -317,16 +261,13 @@ export const HandwritingStrokeOrderCanvas = forwardRef<
           {size > 0 && (
             <Text
               pointerEvents="none"
-              style={[
-                styles.guideChar,
-                {
-                  fontSize: size * 0.7,
-                  lineHeight: size,
-                  width: size,
-                  color: revealed ? colors.primary : colors.outlineVariant,
-                  opacity: revealed ? 0.55 : 0.18,
-                },
-              ]}
+              style={[styles.guideChar, {
+                fontSize: size * 0.7,
+                lineHeight: size,
+                width: size,
+                color: revealed ? colors.primary : colors.outlineVariant,
+                opacity: revealed ? 0.55 : 0.18,
+              }]}
             >
               {guide}
             </Text>
@@ -335,23 +276,14 @@ export const HandwritingStrokeOrderCanvas = forwardRef<
           <Svg width="100%" height="100%" style={StyleSheet.absoluteFill} pointerEvents="none">
             {grid}
 
-            {/* Ghost reference strokes already completed (very faint) */}
-            {normPaths.slice(0, correctCountRef.current).map((p, i) => (
-              <Path key={`ref-${i}`} d={p} stroke={colors.primary} strokeWidth={6} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={0.08} />
+            {/* Correctly drawn strokes (beautified reference paths) */}
+            {drawn.filter(s => s.correct).map((s, i) => (
+              <Path key={`ok-${i}`} d={s.path} stroke={colors.primary} strokeWidth={8} strokeLinecap="round" strokeLinejoin="round" fill="none" />
             ))}
 
-            {/* Drawn strokes — correct ones use reference path (beautified) */}
-            {drawn.map((s, i) => (
-              <Path
-                key={`drawn-${i}`}
-                d={s.path}
-                stroke={s.correct ? colors.primary : colors.error}
-                strokeWidth={8}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-                opacity={s.correct ? 1 : 0.5}
-              />
+            {/* Wrong strokes shown in red (auto-cleared after 800ms) */}
+            {drawn.filter(s => !s.correct).map((s, i) => (
+              <Path key={`err-${i}`} d={s.path} stroke={colors.error} strokeWidth={8} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={0.6} />
             ))}
 
             {/* Active stroke being drawn */}
@@ -359,17 +291,17 @@ export const HandwritingStrokeOrderCanvas = forwardRef<
               <Path d={pointsToPath(current)} stroke={colors.onSurface} strokeWidth={8} strokeLinecap="round" strokeLinejoin="round" fill="none" />
             )}
 
-            {/* Animated guide stroke overlay */}
-            {showGuide && normPaths[guideStrokeIndex] && (
+            {/* Next expected stroke guide — pulsing opacity */}
+            {showNextStrokeGuide && (
               <Path
-                d={normPaths[guideStrokeIndex]}
-                stroke={colors.primary}
-                strokeWidth={10}
+                d={nextStrokePath}
+                stroke={showHint ? colors.error : colors.primary}
+                strokeWidth={showHint ? 12 : 10}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 fill="none"
-                opacity={0.55}
-                strokeDasharray="20 8"
+                opacity={0.5}
+                strokeDasharray="16 10"
               />
             )}
           </Svg>
@@ -377,15 +309,12 @@ export const HandwritingStrokeOrderCanvas = forwardRef<
           {/* Flash feedback overlay */}
           <Animated.View
             pointerEvents="none"
-            style={[
-              StyleSheet.absoluteFill,
-              { backgroundColor: flashColor, opacity: flashOpacity, borderRadius: radius.lg },
-            ]}
+            style={[StyleSheet.absoluteFill, { backgroundColor: flashColor, opacity: flashOpacity, borderRadius: radius.lg }]}
           />
         </View>
 
-        {/* Stroke order badge */}
-        {showCounter && (
+        {/* Stroke progress badge */}
+        {totalStrokes > 0 && (
           <View style={[styles.badge, { backgroundColor: colors.surfaceContainerHigh }]}>
             <Text style={[styles.badgeText, { color: colors.onSurfaceVariant }]}>
               {correctCountRef.current} / {totalStrokes}

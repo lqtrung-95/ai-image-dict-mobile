@@ -97,7 +97,7 @@ export function strokeMatches(
   referenceDirection: { dx: number; dy: number },
   refPath: string,
   canvasSize: number,
-  dotThreshold = 0.45
+  dotThreshold = 0.30
 ): boolean {
   if (userPoints.length < 2) return false;
 
@@ -112,14 +112,17 @@ export function strokeMatches(
   const dot = userDir.dx * referenceDirection.dx + (-userDir.dy) * referenceDirection.dy;
   if (dot < dotThreshold) return false;
 
-  // Start position: must be within 45% of canvas width from the reference start
-  const coords = refPath.match(/(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)/g) ?? [];
-  if (coords.length > 0) {
-    const [rx, ry] = coords[0]!.split(/\s+/).map(Number);
-    const refNorm = normalizePoint(rx!, ry!, canvasSize);
-    const tol = canvasSize * 0.45;
-    if (Math.abs(start.x - refNorm.x) > tol || Math.abs(start.y - refNorm.y) > tol) {
-      return false;
+  // Loose start-position check: only applied when canvasSize > 0 and tolerance is generous.
+  // Position check is intentionally lenient (60%) — users cannot see the exact start point.
+  if (canvasSize > 0) {
+    const coords = refPath.match(/(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)/g) ?? [];
+    if (coords.length > 0) {
+      const [rx, ry] = coords[0]!.split(/\s+/).map(Number);
+      const refNorm = normalizePoint(rx!, ry!, canvasSize);
+      const tol = canvasSize * 0.60;
+      if (Math.abs(start.x - refNorm.x) > tol || Math.abs(start.y - refNorm.y) > tol) {
+        return false;
+      }
     }
   }
 

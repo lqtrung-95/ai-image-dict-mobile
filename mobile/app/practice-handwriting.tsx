@@ -196,11 +196,6 @@ export default function HandwritingScreen() {
         )}
       </View>
 
-      {/* Stroke hint feedback */}
-      {strokeHint && (
-        <Text style={[styles.strokeHint, { color: colors.error }]}>{strokeHint}</Text>
-      )}
-
       {/* Canvas */}
       <HandwritingStrokeOrderCanvas
         ref={canvasRef}
@@ -211,6 +206,11 @@ export default function HandwritingScreen() {
         onStrokeResult={handleStrokeResult}
         onCharacterComplete={handleCharacterComplete}
       />
+
+      {/* Stroke hint below canvas */}
+      <Text style={[styles.strokeHint, { color: strokeHint ? colors.error : 'transparent' }]}>
+        {strokeHint ?? '.'}
+      </Text>
 
       {/* Tool row */}
       <View style={styles.toolRow}>
@@ -238,10 +238,9 @@ export default function HandwritingScreen() {
         </Pressable>
       </View>
 
-      {/* Action area */}
+      {/* Action area — sits directly below toolbar, no auto-margin */}
       <View style={styles.actions}>
         {charDone ? (
-          // Character completed via correct stroke order — show self-rate
           <View style={styles.rateRow}>
             <Pressable style={[styles.rateBtn, { borderColor: colors.error }]} onPress={() => advance(false)}>
               <MaterialIcons name="replay" size={18} color={colors.error} />
@@ -262,7 +261,6 @@ export default function HandwritingScreen() {
             </Text>
           </Pressable>
         ) : (
-          // Revealed but not done via stroke order — allow manual self-rate
           <View style={styles.rateRow}>
             <Pressable style={[styles.rateBtn, { borderColor: colors.error }]} onPress={() => advance(false)}>
               <MaterialIcons name="replay" size={18} color={colors.error} />
@@ -286,7 +284,7 @@ const styles = StyleSheet.create({
   strokeHint: { textAlign: 'center', fontSize: 13, marginBottom: spacing.xs, fontWeight: '500' },
   toolRow: { flexDirection: 'row', justifyContent: 'center', gap: spacing.xl, marginTop: spacing.md },
   tool: { alignItems: 'center', gap: 2, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
-  actions: { marginTop: 'auto', paddingTop: spacing.md },
+  actions: { paddingTop: spacing.md },
   primaryBtn: { borderRadius: radius.pill, paddingVertical: 16, alignItems: 'center' },
   rateRow: { flexDirection: 'row', gap: spacing.md },
   rateBtn: {
