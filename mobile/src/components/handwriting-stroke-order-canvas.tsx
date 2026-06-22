@@ -83,6 +83,8 @@ export const HandwritingStrokeOrderCanvas = forwardRef<
     const [normPaths, setNormPaths] = useState<string[]>([]);
     const [drawn, setDrawn] = useState<DrawnStroke[]>([]);
     const [current, setCurrent] = useState<{ x: number; y: number }[]>([]);
+    // Emit stroke count via effect to avoid setState-in-render violations
+    useEffect(() => { onStrokesChange?.(drawn.length); }, [drawn.length]); // eslint-disable-line react-hooks/exhaustive-deps
     const currentRef = useRef<{ x: number; y: number }[]>([]);
     const correctCountRef = useRef(0);
     const consecutiveWrongRef = useRef(0);
@@ -161,7 +163,7 @@ export const HandwritingStrokeOrderCanvas = forwardRef<
           // Fallback: no stroke data → accept everything as freehand
           if (!strokeData || expectedIdx >= strokeData.rawPaths.length) {
             const path = pointsToPath(pts);
-            if (path) setDrawn((prev) => { const next = [...prev, { path, correct: true }]; onStrokesChange?.(next.length); return next; });
+            if (path) setDrawn((prev) => [...prev, { path, correct: true }]);
             return;
           }
 
@@ -176,11 +178,7 @@ export const HandwritingStrokeOrderCanvas = forwardRef<
             setShowHint(false);
             triggerFlash(colors.primary);
 
-            setDrawn((prev) => {
-              const next = [...prev, { path: beautified, correct: true }];
-              onStrokesChange?.(next.length);
-              return next;
-            });
+            setDrawn((prev) => [...prev, { path: beautified, correct: true }]);
 
             const total = strokeData.rawPaths.length;
             onStrokeResult?.('correct', correctCountRef.current, total);
@@ -195,11 +193,7 @@ export const HandwritingStrokeOrderCanvas = forwardRef<
             // Show wrong stroke in red briefly — clear it after 800ms
             const path = pointsToPath(pts);
             if (path) {
-              setDrawn((prev) => {
-                const next = [...prev, { path, correct: false }];
-                onStrokesChange?.(next.length);
-                return next;
-              });
+              setDrawn((prev) => [...prev, { path, correct: false }]);
               setTimeout(() => {
                 setDrawn((prev) => prev.filter((s) => s.correct));
               }, 800);
@@ -219,15 +213,12 @@ export const HandwritingStrokeOrderCanvas = forwardRef<
         correctCountRef.current = 0;
         consecutiveWrongRef.current = 0;
         setShowHint(false);
-        onStrokesChange?.(0);
       },
       undo: () => {
         setDrawn((prev) => {
           const last = prev[prev.length - 1];
           if (last?.correct) correctCountRef.current = Math.max(0, correctCountRef.current - 1);
-          const next = prev.slice(0, -1);
-          onStrokesChange?.(next.length);
-          return next;
+          return prev.slice(0, -1);
         });
       },
       strokeCount: () => drawn.length,
