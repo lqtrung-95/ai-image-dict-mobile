@@ -88,6 +88,20 @@ function computeStrokeDirection(path: string): { dx: number; dy: number } {
 }
 
 /**
+ * Returns the normalised start point of an SVG path (first coordinate pair).
+ * Used to render a "start here" dot for the guide overlay.
+ */
+export function getStrokeStartPoint(
+  hwPath: string,
+  canvasSize: number
+): { x: number; y: number } | null {
+  const coords = hwPath.match(/(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)/g) ?? [];
+  if (coords.length === 0) return null;
+  const [rx, ry] = coords[0]!.split(/\s+/).map(Number);
+  return normalizePoint(rx!, ry!, canvasSize);
+}
+
+/**
  * Returns true when the user's freehand stroke direction is close enough to
  * the reference stroke direction (dot-product ≥ threshold) and starts in
  * roughly the correct area of the canvas.
@@ -110,21 +124,7 @@ export function strokeMatches(
 
   // Flip user dy to match HW's flipped Y axis for dot product
   const dot = userDir.dx * referenceDirection.dx + (-userDir.dy) * referenceDirection.dy;
-  if (dot < dotThreshold) return false;
-
-  // Loose start-position check: only applied when canvasSize > 0 and tolerance is generous.
-  // Position check is intentionally lenient (60%) — users cannot see the exact start point.
-  if (canvasSize > 0) {
-    const coords = refPath.match(/(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)/g) ?? [];
-    if (coords.length > 0) {
-      const [rx, ry] = coords[0]!.split(/\s+/).map(Number);
-      const refNorm = normalizePoint(rx!, ry!, canvasSize);
-      const tol = canvasSize * 0.60;
-      if (Math.abs(start.x - refNorm.x) > tol || Math.abs(start.y - refNorm.y) > tol) {
-        return false;
-      }
-    }
-  }
-
-  return true;
+  // Direction match is sufficient for beginner UX — no position check.
+  // Position checks were too punishing since users can't see the exact start point.
+  return dot >= dotThreshold;
 }

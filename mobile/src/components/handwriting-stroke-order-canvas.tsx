@@ -25,13 +25,14 @@ import {
   LayoutChangeEvent,
   Animated,
 } from 'react-native';
-import Svg, { Path, Line } from 'react-native-svg';
+import Svg, { Path, Line, Circle } from 'react-native-svg';
 import { useTheme } from '../theme/theme-context';
 import { radius, fonts } from '../theme/theme';
 import {
   fetchStrokeData,
   normalizeStrokePath,
   strokeMatches,
+  getStrokeStartPoint,
   StrokeData,
 } from '../lib/hanzi-writer-stroke-order-matching-service';
 
@@ -237,8 +238,10 @@ export const HandwritingStrokeOrderCanvas = forwardRef<
     );
 
     const totalStrokes = strokeData?.rawPaths.length ?? 0;
-    // Index of the next stroke to draw
-    const nextStrokePath = normPaths[correctCountRef.current];
+    const nextIdx = correctCountRef.current;
+    const nextStrokePath = normPaths[nextIdx];
+    const nextRawPath = strokeData?.rawPaths[nextIdx];
+    const guideStartPt = nextRawPath && size > 0 ? getStrokeStartPoint(nextRawPath, size) : null;
     const showNextStrokeGuide = (showGuide || showHint) && !!nextStrokePath;
 
     return (
@@ -282,18 +285,29 @@ export const HandwritingStrokeOrderCanvas = forwardRef<
               <Path d={pointsToPath(current)} stroke={colors.onSurface} strokeWidth={8} strokeLinecap="round" strokeLinejoin="round" fill="none" />
             )}
 
-            {/* Next expected stroke guide — pulsing opacity */}
+            {/* Next expected stroke guide — solid bright line so it's clearly visible */}
             {showNextStrokeGuide && (
-              <Path
-                d={nextStrokePath}
-                stroke={showHint ? colors.error : colors.primary}
-                strokeWidth={showHint ? 12 : 10}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-                opacity={0.5}
-                strokeDasharray="16 10"
-              />
+              <>
+                <Path
+                  d={nextStrokePath!}
+                  stroke={showHint ? colors.error : colors.primary}
+                  strokeWidth={showHint ? 14 : 12}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  fill="none"
+                  opacity={0.7}
+                />
+                {/* Start-point dot: shows exactly where to begin the stroke */}
+                {guideStartPt && (
+                  <Circle
+                    cx={guideStartPt.x}
+                    cy={guideStartPt.y}
+                    r={10}
+                    fill={showHint ? colors.error : colors.primary}
+                    opacity={0.9}
+                  />
+                )}
+              </>
             )}
           </Svg>
 
