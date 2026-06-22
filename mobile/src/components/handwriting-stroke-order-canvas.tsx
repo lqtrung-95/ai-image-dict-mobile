@@ -27,7 +27,7 @@ import Svg, { Path, Line } from 'react-native-svg';
 import { useTheme } from '../theme/theme-context';
 import { radius, fonts } from '../theme/theme';
 import {
-  getStrokeData,
+  fetchStrokeData,
   normalizeStrokePath,
   strokeMatches,
   StrokeData,
@@ -118,14 +118,18 @@ export const HandwritingStrokeOrderCanvas = forwardRef<
     const guideAnimRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const guideProgressAnim = useRef(new Animated.Value(0)).current;
 
-    // Load stroke data when character or canvas size changes
+    // Fetch stroke data when character changes (async CDN load)
     useEffect(() => {
-      const data = getStrokeData(guide);
-      setStrokeData(data);
+      setStrokeData(null);
       setDrawn([]);
       correctCountRef.current = 0;
       setCurrent([]);
       currentRef.current = [];
+      let cancelled = false;
+      fetchStrokeData(guide).then((data) => {
+        if (!cancelled) setStrokeData(data);
+      });
+      return () => { cancelled = true; };
     }, [guide]);
 
     useEffect(() => {
