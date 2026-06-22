@@ -224,6 +224,12 @@ export const vi = {
     clear: 'Xóa',
     practiceAgain: 'Luyện lại',
     gotIt: 'Biết rồi',
+    guide: 'Hướng dẫn',
+    wrongStrokeOrder: 'Sai thứ tự nét — thử lại',
+    showCharacter: 'Xem chữ',
+    checkWriting: 'Kiểm tra bài viết',
+    wordProgress: 'Từ %{current} / %{total}',
+    charProgress: 'Chữ %{current} / %{total}',
   },
   history: {
     title: 'Lịch sử phân tích',

@@ -224,6 +224,12 @@ export const en = {
     clear: 'Clear',
     practiceAgain: 'Practice again',
     gotIt: 'Got it',
+    guide: 'Guide',
+    wrongStrokeOrder: 'Wrong stroke order — try again',
+    showCharacter: 'Show Character',
+    checkWriting: 'Check My Writing',
+    wordProgress: 'Word %{current} / %{total}',
+    charProgress: 'Character %{current} / %{total}',
   },
   history: {
     title: 'Analysis History',

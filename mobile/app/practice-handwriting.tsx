@@ -5,7 +5,10 @@ import { useAuth } from '../src/lib/auth-context';
 import { LoginRequiredPrompt } from '../src/components/login-required-prompt';
 import { PracticeStatusView } from '../src/components/practice-status-view';
 import { AppHeader } from '../src/components/app-header';
-import { HandwritingCanvas, HandwritingCanvasHandle } from '../src/components/handwriting-canvas';
+import {
+  HandwritingStrokeOrderCanvas,
+  HandwritingStrokeOrderCanvasHandle,
+} from '../src/components/handwriting-stroke-order-canvas';
 import { speakChinese } from '../src/lib/tts-speech-service';
 import {
   loadQuizPool, traceableWords, splitCharacters, recordHandwritingAttempt,
@@ -14,7 +17,7 @@ import {
 import type { VocabularyItem } from '../src/lib/vocabulary-service';
 import { useTheme } from '../src/theme/theme-context';
 import { useLocale } from '../src/lib/locale-react-context';
-import { spacing, radius, typography, fonts } from '../src/theme/theme';
+import { spacing, radius, typography } from '../src/theme/theme';
 
 type Phase = 'loading' | 'tooFew' | 'error' | 'practicing' | 'done';
 
@@ -33,7 +36,7 @@ export default function HandwritingScreen() {
   const { user } = useAuth();
   const { colors } = useTheme();
   const { t } = useLocale();
-  const canvasRef = useRef<HandwritingCanvasHandle>(null);
+  const canvasRef = useRef<HandwritingStrokeOrderCanvasHandle>(null);
 
   const [phase, setPhase] = useState<Phase>('loading');
   const [words, setWords] = useState<VocabularyItem[]>([]);
@@ -42,13 +45,19 @@ export default function HandwritingScreen() {
   const [revealed, setRevealed] = useState(false);
   const [strokeCount, setStrokeCount] = useState(0);
   const [results, setResults] = useState({ correct: 0, again: 0 });
-  // Tracks whether every character in the current word was self-rated "Got it".
+  const [showGuide, setShowGuide] = useState(false);
+  // Last stroke feedback message (e.g. "Wrong stroke order!")
+  const [strokeHint, setStrokeHint] = useState<string | null>(null);
+  // Whether the current character has been completed via correct stroke order
+  const [charDone, setCharDone] = useState(false);
   const wordSuccess = useRef(true);
 
   const start = useCallback(async () => {
     setPhase('loading');
     setWordIndex(0); setCharIndex(0); setRevealed(false); setStrokeCount(0);
     setResults({ correct: 0, again: 0 });
+    setCharDone(false);
+    setStrokeHint(null);
     wordSuccess.current = true;
     try {
       const pool = traceableWords(await loadQuizPool());
@@ -66,13 +75,19 @@ export default function HandwritingScreen() {
     return <LoginRequiredPrompt message={t('handwriting.loginPrompt')} />;
   }
 
-  const resetCanvas = () => { canvasRef.current?.clear(); setStrokeCount(0); setRevealed(false); };
+  const resetCanvas = () => {
+    canvasRef.current?.clear();
+    setStrokeCount(0);
+    setRevealed(false);
+    setCharDone(false);
+    setStrokeHint(null);
+  };
 
   const word = words[wordIndex];
   const chars = word ? splitCharacters(word.wordZh) : [];
   const currentChar = chars[charIndex];
+  const multiChar = chars.length > 1;
 
-  // Move to the next character, or finish the word and record the attempt.
   const advance = (gotIt: boolean) => {
     if (!gotIt) wordSuccess.current = false;
 
@@ -83,7 +98,6 @@ export default function HandwritingScreen() {
       return;
     }
 
-    // Word complete — record one attempt for the whole word
     const success = wordSuccess.current;
     recordHandwritingAttempt(word.id, success);
     setResults((r) => ({ correct: r.correct + (success ? 1 : 0), again: r.again + (success ? 0 : 1) }));
@@ -96,6 +110,25 @@ export default function HandwritingScreen() {
       setCharIndex(0);
       wordSuccess.current = true;
       resetCanvas();
+    }
+  };
+
+  // Called by canvas when all strokes for the character are drawn correctly
+  const handleCharacterComplete = () => {
+    setCharDone(true);
+    setStrokeHint(null);
+    speakChinese(currentChar);
+  };
+
+  const handleStrokeResult = (
+    result: 'correct' | 'wrong' | null,
+    correctSoFar: number,
+    total: number
+  ) => {
+    if (result === 'wrong') {
+      setStrokeHint(t('handwriting.wrongStrokeOrder'));
+    } else if (result === 'correct') {
+      setStrokeHint(correctSoFar < total ? `${correctSoFar} / ${total}` : null);
     }
   };
 
@@ -113,19 +146,16 @@ export default function HandwritingScreen() {
       </View>
     );
   }
-
   if (phase === 'error') {
     return withHeader(
       <PracticeStatusView icon="error-outline" title={t('handwriting.errorTitle')} subtitle={t('handwriting.errorSub')} actionLabel={t('handwriting.retry')} onAction={start} />
     );
   }
-
   if (phase === 'tooFew') {
     return withHeader(
       <PracticeStatusView icon="draw" title={t('handwriting.noWordsTitle')} subtitle={t('handwriting.noWordsSub')} />
     );
   }
-
   if (phase === 'done') {
     const total = results.correct + results.again;
     return withHeader(
@@ -139,27 +169,24 @@ export default function HandwritingScreen() {
     );
   }
 
-  // ---- practicing ----
-  const multiChar = chars.length > 1;
-
   return withHeader(
     <View style={{ flex: 1, padding: spacing.containerMargin }}>
       {/* Progress */}
       <View style={styles.progressRow}>
         <Text style={[typography.label, { fontSize: 13, color: colors.onSurfaceVariant }]}>
-          Word {wordIndex + 1} / {words.length}
+          {t('handwriting.wordProgress', { current: wordIndex + 1, total: words.length })}
         </Text>
         {multiChar && (
           <Text style={[typography.label, { fontSize: 13, color: colors.outline }]}>
-            Character {charIndex + 1} / {chars.length}
+            {t('handwriting.charProgress', { current: charIndex + 1, total: chars.length })}
           </Text>
         )}
       </View>
 
-      {/* Prompt: meaning + pinyin (pinyin hidden until revealed to make it a real test) */}
+      {/* Prompt */}
       <View style={styles.prompt}>
         <Text style={[typography.heading, { color: colors.onSurface, textAlign: 'center' }]}>{word.wordEn}</Text>
-        {revealed ? (
+        {revealed || charDone ? (
           <Pressable onPress={() => speakChinese(currentChar)} style={styles.pinyinRow}>
             <Text style={[typography.pinyin, { color: colors.primary, fontSize: 16 }]}>{word.wordPinyin}</Text>
             <MaterialIcons name="volume-up" size={18} color={colors.primary} />
@@ -169,12 +196,20 @@ export default function HandwritingScreen() {
         )}
       </View>
 
+      {/* Stroke hint feedback */}
+      {strokeHint && (
+        <Text style={[styles.strokeHint, { color: colors.error }]}>{strokeHint}</Text>
+      )}
+
       {/* Canvas */}
-      <HandwritingCanvas
+      <HandwritingStrokeOrderCanvas
         ref={canvasRef}
         guide={currentChar}
-        revealed={revealed}
+        revealed={revealed || charDone}
+        showGuide={showGuide}
         onStrokesChange={setStrokeCount}
+        onStrokeResult={handleStrokeResult}
+        onCharacterComplete={handleCharacterComplete}
       />
 
       {/* Tool row */}
@@ -187,20 +222,47 @@ export default function HandwritingScreen() {
           <MaterialIcons name="refresh" size={20} color={strokeCount === 0 ? colors.outlineVariant : colors.onSurfaceVariant} />
           <Text style={[typography.label, { fontSize: 12, color: strokeCount === 0 ? colors.outlineVariant : colors.onSurfaceVariant }]}>{t('handwriting.clear')}</Text>
         </Pressable>
+        {/* Guide toggle */}
+        <Pressable
+          style={[styles.tool, showGuide && { backgroundColor: colors.primaryContainer, borderRadius: radius.sm }]}
+          onPress={() => setShowGuide((v) => !v)}
+        >
+          <MaterialIcons
+            name="auto-fix-high"
+            size={20}
+            color={showGuide ? colors.onPrimaryContainer : colors.onSurfaceVariant}
+          />
+          <Text style={[typography.label, { fontSize: 12, color: showGuide ? colors.onPrimaryContainer : colors.onSurfaceVariant }]}>
+            {t('handwriting.guide')}
+          </Text>
+        </Pressable>
       </View>
 
       {/* Action area */}
       <View style={styles.actions}>
-        {!revealed ? (
+        {charDone ? (
+          // Character completed via correct stroke order — show self-rate
+          <View style={styles.rateRow}>
+            <Pressable style={[styles.rateBtn, { borderColor: colors.error }]} onPress={() => advance(false)}>
+              <MaterialIcons name="replay" size={18} color={colors.error} />
+              <Text style={[typography.label, { fontSize: 14, color: colors.error }]}>{t('handwriting.practiceAgain')}</Text>
+            </Pressable>
+            <Pressable style={[styles.rateBtn, { backgroundColor: colors.primaryContainer, borderColor: colors.primaryContainer }]} onPress={() => advance(true)}>
+              <MaterialIcons name="check" size={18} color={colors.onPrimaryContainer} />
+              <Text style={[typography.label, { fontSize: 14, color: colors.onPrimaryContainer }]}>{t('handwriting.gotIt')}</Text>
+            </Pressable>
+          </View>
+        ) : !revealed ? (
           <Pressable
             style={[styles.primaryBtn, { backgroundColor: colors.primaryContainer }]}
             onPress={() => setRevealed(true)}
           >
             <Text style={[typography.label, { fontSize: 15, color: colors.onPrimaryContainer }]}>
-              {strokeCount === 0 ? 'Show Character' : 'Check My Writing'}
+              {strokeCount === 0 ? t('handwriting.showCharacter') : t('handwriting.checkWriting')}
             </Text>
           </Pressable>
         ) : (
+          // Revealed but not done via stroke order — allow manual self-rate
           <View style={styles.rateRow}>
             <Pressable style={[styles.rateBtn, { borderColor: colors.error }]} onPress={() => advance(false)}>
               <MaterialIcons name="replay" size={18} color={colors.error} />
@@ -219,10 +281,11 @@ export default function HandwritingScreen() {
 
 const styles = StyleSheet.create({
   progressRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
-  prompt: { alignItems: 'center', marginBottom: spacing.md, minHeight: 56, justifyContent: 'center' },
+  prompt: { alignItems: 'center', marginBottom: spacing.sm, minHeight: 56, justifyContent: 'center' },
   pinyinRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  strokeHint: { textAlign: 'center', fontSize: 13, marginBottom: spacing.xs, fontWeight: '500' },
   toolRow: { flexDirection: 'row', justifyContent: 'center', gap: spacing.xl, marginTop: spacing.md },
-  tool: { alignItems: 'center', gap: 2, paddingHorizontal: spacing.md },
+  tool: { alignItems: 'center', gap: 2, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
   actions: { marginTop: 'auto', paddingTop: spacing.md },
   primaryBtn: { borderRadius: radius.pill, paddingVertical: 16, alignItems: 'center' },
   rateRow: { flexDirection: 'row', gap: spacing.md },
